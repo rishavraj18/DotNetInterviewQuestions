@@ -76,6 +76,26 @@ Cache services, Logging frameworks, Configuration providers
 Only singleton/transient services are injected into middleware.
 Scoped services are not allowed
 
+
+| Lifetime      | Where Stored         | Created When                  | Disposed When                |
+| ------------- | -------------------- | ----------------------------- | ---------------------------- |
+| **Transient** | not stored           | every request for the service | end of scope (if disposable) |
+| **Scoped**    | request scope cache  | first request within scope    | end of request               |
+| **Singleton** | root container cache | once at app startup           | app shutdown                 |
+
+
+✔ If it holds global shared state → Singleton
+
+(e.g., memory cache, configuration, system-wide services)
+
+✔ If it works on a specific request → Scoped
+
+(e.g., DbContext, request trackers, user services)
+
+✔ If it’s stateless and lightweight → Transient
+
+(e.g., helpers, utilities, mappers)
+
 -------------------------------------------------------------
 ## What are the key advantages of Dependency Injection (DI)
 
@@ -92,6 +112,7 @@ Scoped services are not allowed
 Mocking in NUnit means creating fake versions of dependencies 
 so you can test your class without using the real implementations 
 (like real database, email service, API calls, etc.).
+
 -------------------------------------------------------------
 
 ## Why Does the Test Pass Even When No Real Email Was Sent?
@@ -128,6 +149,7 @@ In unit testing:
 We do NOT test whether an email is actually delivered
 We test whether our class attempted to send the email correctly
 The email sending itself is tested in integration tests, not unit tests
+
 -------------------------------------------------------------
 
 ## Explian Program.cs files component ?
@@ -264,6 +286,44 @@ context.RequestServices
 Only app.Run() creates a terminal middleware
 Meaning the pipeline ends there.
 
+
+### Flow of a Request
+
+Step 1 → Kestrel receives HTTP request
+
+Kestrel is the built-in web server.
+
+Step 2 → A request scope is created
+
+DI Scoped services live inside this scope.
+
+Step 3 → Middleware pipeline begins
+
+Each middleware is executed in order they were added.
+
+Step 4 → Endpoint is selected (Routing)
+
+UseRouting() inspects the request:
+
+* Path
+* HTTP method
+* Route templates
+
+It selects the matching endpoint.
+
+Step 5 → Endpoint executes (Controller/Minimal API)
+
+EndpointMiddleware triggers the controller or handler.
+
+Step 6 → Response travels back up the pipeline
+
+After the endpoint responds, control unwinds:
+Endpoint → Authorization → Authentication → Routing → Exception handler
+
+Step 7 → Scope is disposed
+
+All scoped/transient disposables are cleaned up.
+
 -------------------------------------------------------------
 ## What is Short-Circuiting the Pipeline ?
 
@@ -291,46 +351,57 @@ CORS failures
 -------------------------------------------------------------
 
 ## What are constructors?
+
 A constructor is a special method inside a class that runs automatically 
 when you create (instantiate) an object.
 
 Its job is to:
-Initialize the object
-Set default values
-Inject dependencies
 
-Same name as the class
-No return type
+* Initialize the object
+* Set default values
+* Inject dependencies
+
+Features:
+
+* It has same name as the class
+* No return type
 
 -------------------------------------------------------------
 ## Parameterized vs Non-parameterized constructors
 
-Feature				Non-parameterized				Parameterized
-Takes arguments			❌ No						✔ Yes
-Provides defaults		✔ Yes						❌ Caller must pass values
-Used for DI				Rarely						Very commonly
-Enforces rules			❌ No						✔ Yes
-Flexibility				High						High but requires inputs
-Auto-generated?			✔ Yes (if none defined)		❌ No
+| Feature               | Non-parameterized       | Parameterized             |
+| --------------------- | ----------------------- | ------------------------- |
+| **Takes arguments**   | ❌ No                    | ✔ Yes                     |
+| **Provides defaults** | ✔ Yes                   | ❌ Caller must pass values |
+| **Used for DI**       | Rarely                  | Very commonly             |
+| **Enforces rules**    | ❌ No                    | ✔ Yes                     |
+| **Flexibility**       | High                    | High but requires inputs  |
+| **Auto-generated?**   | ✔ Yes (if none defined) | ❌ No                      |
+
 
 -------------------------------------------------------------
 
-Method Overloading vs Method Overriding (examples)
+## Method Overloading vs Method Overriding (examples)
 
-Feature		        Method Overloading						 	Method Overriding
-Concept		        Same method name, different signatures  	Same method name & signature in child class 
-Polymorphism        compile-time polymorphism				 	runtime polymorphism
-Occurs in	        Same class (or derived class)	         	Only in inheritance (base → derived class)
-Parameters	        Must be different (type, number, order)	    Must be same
-Return type	        Can be different							Must be same (or covariant)
-Modifier needed?	No special keyword							Needs virtual in base + override in derived
-Binding time	    Compile-time								Runtime
-Purpose				Increase flexibility						Change/extend parent behavior
+| Feature              | Method Overloading                                                 | Method Overriding                                                  |
+| -------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| **Concept**          | Same method name, different signatures (compile-time polymorphism) | Same method name & signature in child class (runtime polymorphism) |
+| **Occurs in**        | Same class (or derived class)                                      | Only in inheritance (base → derived class)                         |
+| **Parameters**       | Must be different (type, number, order)                            | Must be same                                                       |
+| **Return type**      | Can be different                                                   | Must be same (or covariant)                                        |
+| **Modifier needed?** | No special keyword                                                 | Needs `virtual` in base + `override` in derived                    |
+| **Binding time**     | Compile-time                                                       | Runtime                                                            |
+| **Purpose**          | Increase flexibility                                               | Change/extend parent behavior                                      |
+
 
 -------------------------------------------------------------
-What are Delegates?
+## What are Delegates?
+
 A delegate is a type-safe function pointer —
 meaning it can hold a reference to a method, and you can call that method through the delegate.
+
+A delegate is a type-safe object used to reference methods. It allows you to pass methods as parameters, store them in variables, and execute them indirectly. 
+Delegates enable callbacks, events, LINQ, and functional programming in C#.
 
 ✔ Type-safe → method signature must match the delegate
 ✔ Can point to static or instance methods
@@ -338,7 +409,7 @@ meaning it can hold a reference to a method, and you can call that method throug
 ✔ Foundation for events, LINQ, async, Func<>, Action<>
 
 -------------------------------------------------------------
-Where Delegates Are Used ?
+## Where Delegates Are Used ?
 
 Delegates form the foundation for:
 Events
@@ -358,16 +429,48 @@ This works because middleware takes RequestDelegate, which is a delegate type.
 
 -------------------------------------------------------------
 
-Explain async-await & asynchronous programming in C#
+## What Is Asynchronous Programming? Why do we need it?
 
-The method starts running.
+Asynchronous programming allows your application to perform tasks without blocking the main thread.
+Instead of waiting for long-running operations (like database queries, file I/O, API calls), the program continues doing other work.
 
-When it hits await SomeTask:
-It returns control to the caller.
-It lets the thread do other work.
+* Improve performance
+* Increase responsiveness
+* Avoid UI freezing (in desktop/mobile apps)
+* Handle high-concurrency (in web apps)
 
-When the awaited task completes:
-The method resumes from where it stopped.
+
+### Asynchronous Return Types
+
+| Return Type                  | Meaning                                             |
+| ---------------------------- | --------------------------------------------------- |
+| `Task`                       | async method that returns nothing                   |
+| `Task<T>`                    | async method that returns a value                   |
+| `ValueTask` / `ValueTask<T>` | optimization for high-performance                   |
+| `void`                       | only for event handlers (not recommended otherwise) |
+
+
+### Async in ASP.NET Core
+
+public async Task<IActionResult> GetUsers()
+{
+    var users = await _service.GetUsersAsync();
+    return Ok(users);
+}
+
+
+-------------------------------------------------------------
+
+## Explain async-await & asynchronous programming in C#
+
+1. The method starts running.
+
+2. When it hits await SomeTask:
+   * It returns control to the caller.
+   * It lets the thread do other work.
+
+3. When the awaited task completes:
+   * The method resumes from where it stopped.
 
 This creates the illusion of "pausing," but really nothing is blocked.
 
@@ -378,43 +481,42 @@ await keyword
 Pauses the method until the awaited task finishes, without blocking the thread.
 
 Return type - Task or void
--------------------------------------------------------------
-Wht to avoid Blocking Calls in Async Code
 
-Never use:
-
-.Result
-
-.Wait()
-
-.GetAwaiter().GetResult()
-
-These cause deadlocks and block threads
 -------------------------------------------------------------
 
-Asynchronous programming
-Asynchronous programming allows your application to perform tasks without blocking the main thread.
-Instead of waiting for long-running operations (like database queries, file I/O, API calls), 
-the program continues doing other work.
+## Synchronous vs Asynchronous
 
-Why do we need it?
-
-Improve performance
-Increase responsiveness
-Avoid UI freezing (in desktop/mobile apps)
-Handle high-concurrency (in web apps)
+### Synchronous:
 
 var data = GetData();   // program waits here
 Console.WriteLine("Done"); 
 
+### Asynchronous:
+
 var data = await GetDataAsync(); // does NOT block
 Console.WriteLine("Done");       // runs after task finishes
 
--------------------------------------------------------------
-Code First vs Database First
-Code First: You create C# model classes first, and EF generates the database using migrations. Best for new projects and domain-driven development.
 
-Database First: You start with an existing database, and EF generates classes from it (scaffolding). Best for legacy databases or DB-first environments.
+-------------------------------------------------------------
+## Why to avoid Blocking Calls in Async Code
+
+Never use:
+
+* .Result
+* .Wait()
+* .GetAwaiter().GetResult()
+
+These cause deadlocks and block threads
+
+-------------------------------------------------------------
+
+## Code First vs Database First
+
+* Code First: 
+You create C# model classes first, and EF generates the database using migrations. Best for new projects and domain-driven development.
+
+* Database First: 
+You start with an existing database, and EF generates classes from it (scaffolding). Best for legacy databases or DB-first environments.
 
 When to use Code First:
 
@@ -453,7 +555,9 @@ Migrations become harder or disabled
 Not ideal for domain-driven design
 
 -------------------------------------------------------------
-How migrations work in Code First
+
+## How migrations work in Code First
+
 Migrations in EF Core are a way to:
 
 Track changes to your model (classes)
@@ -474,7 +578,9 @@ Executes the SQL in the Up() methods
 Updates a table in the database:
 
 -------------------------------------------------------------
-What are Indexes?
+
+## What are Indexes?
+
 It helps the database find rows faster without scanning the entire table.
 
 Why use indexes?
@@ -487,62 +593,71 @@ Slows down INSERT / UPDATE / DELETE
 Takes additional memory space
 
 -------------------------------------------------------------
-Clustered vs Non-Clustered Indexes
 
-Feature	 						Clustered Index				  Non-Clustered Index
-Defines physical order of data	✔ Yes						  ❌ No
-Number allowed per table		1							  Many
-Storage							Actual table				  Separate from table
-Speed							Faster						  Slightly slower (extra lookup)
-Use case						Primary keys, unique values	  Searching frequently used columns
-Pointer							Not needed					  Points to clustered index key / row
-Best for						Range queries				  High-selectivity columns
+## Clustered vs Non-Clustered Indexes
+
+| Feature                        | Clustered Index             | Non-Clustered Index                 |
+| ------------------------------ | --------------------------- | ----------------------------------- |
+| Defines physical order of data | ✔ Yes                       | ❌ No                                |
+| Number allowed per table       | **1**                       | **Many**                            |
+| Storage                        | Actual table                | Separate from table                 |
+| Speed                          | Faster                      | Slightly slower (extra lookup)      |
+| Use case                       | Primary keys, unique values | Searching frequently used columns   |
+| Pointer                        | Not needed                  | Points to clustered index key / row |
+| Best for                       | Range queries               | High-selectivity columns            |
+
 
 -------------------------------------------------------------
 
-Stored Procedures vs Views
+## Stored Procedures vs Views
 
-Feature							Stored Procedure						View
-Type							Program (SQL code block)				Virtual table
-Contains						Multiple SQL statements + logic	Single 	SELECT query
-Parameters						✔ Yes									❌ No
-Return type						Result sets, output params				Result set only
-Supports INSERT/UPDATE/DELETE	✔ Yes									❌ Usually No (except updatable views)
-Logic (IF, loops)				✔ Yes									❌ No
-Executes						Using CALL/EXEC							Using SELECT
-Used for						Business logic							Data representation
-Stores data?					❌ No									❌ No (only definition)
+| Feature                       | Stored Procedure                | View                                  |
+| ----------------------------- | ------------------------------- | ------------------------------------- |
+| Type                          | Program (SQL code block)        | Virtual table                         |
+| Contains                      | Multiple SQL statements + logic | Single SELECT query                   |
+| Parameters                    | ✔ Yes                           | ❌ No                                  |
+| Return type                   | Result sets, output params      | Result set only                       |
+| Supports INSERT/UPDATE/DELETE | ✔ Yes                           | ❌ Usually No (except updatable views) |
+| Logic (IF, loops)             | ✔ Yes                           | ❌ No                                  |
+| Executes                      | Using CALL/EXEC                 | Using SELECT                          |
+| Used for                      | Business logic                  | Data representation                   |
+| Stores data?                  | ❌ No                            | ❌ No (only definition)                |
+
+
 -------------------------------------------------------------
-Morning:
 
-Docker vs Container:
+
+## Docker vs Container:
 			
-Feature		Docker											Container
-Definition	A platform/tool to build & manage containers	A lightweight runtime environment for apps
-Type		Technology / Software							The actual runtime instance
-Purpose		Create, run, and orchestrate containers			Run the application in isolation
-Includes	Docker Engine, Docker CLI, Docker Hub			App + dependencies
-Build?		Yes (Dockerfile → Image → Container)			No (container is the result)
-Run?		Runs containers									The thing being run
+| Feature    | Docker                                       | Container                                  |
+| ---------- | -------------------------------------------- | ------------------------------------------ |
+| Definition | A platform/tool to build & manage containers | A lightweight runtime environment for apps |
+| Type       | Technology / Software                        | The actual runtime instance                |
+| Purpose    | Create, run, and orchestrate containers      | Run the application in isolation           |
+| Includes   | Docker Engine, Docker CLI, Docker Hub        | App + dependencies                         |
+| Build?     | Yes (Dockerfile → Image → Container)         | No (container is the result)               |
+| Run?       | Runs containers                              | The thing being run                        |
+
 
 -------------------------------------------------------------
-Difference between Filter and Middleware
+## Difference between Filter and Middleware
 
-Feature							Middleware									Filter
-Where it works					Entire request pipeline (before routing)	Only inside MVC pipeline (Controllers/Actions)
-Purpose							Cross-cutting system-level concerns			Action-level concerns in MVC
-Executes						From Program.cs pipeline					Around controller/action execution
-Knows about Controller/Action?	❌ No										✔ Yes
-Access to Model Binding, 
-Action Context?					❌ No										✔ Yes
-Order							Order added in Program.cs					Executes based on filter type & order
-Types							Only one: middleware						Many types: Auth, Resource, Action, Exception, Result
-Used for						Logging, routing, auth, compression, CORS	Validation, caching, authorization per action, exception handling
-Runs for static files?			✔ Yes										❌ No
+| Feature                                      | Middleware                                | Filter                                                            |
+| -------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------- |
+| **Where it works**                           | Entire request pipeline (before routing)  | Only inside MVC pipeline (Controllers/Actions)                    |
+| **Purpose**                                  | Cross-cutting system-level concerns       | Action-level concerns in MVC                                      |
+| **Executes**                                 | From Program.cs pipeline                  | Around controller/action execution                                |
+| **Knows about Controller/Action?**           | ❌ No                                      | ✔ Yes                                                             |
+| **Access to Model Binding, Action Context?** | ❌ No                                      | ✔ Yes                                                             |
+| **Order**                                    | Order added in Program.cs                 | Executes based on filter type & order                             |
+| **Types**                                    | Only one: middleware                      | Many types: Auth, Resource, Action, Exception, Result             |
+| **Used for**                                 | Logging, routing, auth, compression, CORS | Validation, caching, authorization per action, exception handling |
+| **Runs for static files?**                   | ✔ Yes                                     | ❌ No                                                              |
+
 
 -------------------------------------------------------------
 
-What is an Extension Method in C#
+## What is an Extension Method in C#
 
 public static class StringExtensions
 {
@@ -559,9 +674,10 @@ Has this keyword before the first parameter
 → This tells C# which type you are extending.
 
 Even though you never modified the string class, it behaves like the method exists on it.
+
 -------------------------------------------------------------
 
-Event call in Microservices
+## Event call in Microservices
 
 In microservices, an event call means one service publishes an event, 
 and one or more services react to it asynchronously.
@@ -612,7 +728,7 @@ All services remain completely independent.
 -------------------------------------------------------------
 
 
-const vs readonly vs static?
+## const vs readonly vs static?
 
 | Feature               | const                     | readonly                     | static               |
 | --------------------- | ------------------------- | ---------------------------- | -------------------- |
@@ -625,7 +741,7 @@ const vs readonly vs static?
 
 -------------------------------------------------------------
 
-CLR & CTS?
+## CLR & CTS?
 
 | Feature    | CLR                           | CTS                        |
 | ---------- | ----------------------------- | -------------------------- |
@@ -635,9 +751,9 @@ CLR & CTS?
 | Works with | IL Code                       | All .NET languages         |
 | Ensures    | Application execution         | Cross-language type safety |
 
+-------------------------------------------------------------
 
-
-IIS vs Kestrel?
+## IIS vs Kestrel?
 
 | Feature               | IIS                                           | Kestrel                                   |
 | --------------------- | --------------------------------------------- | ----------------------------------------- |
@@ -650,7 +766,7 @@ IIS vs Kestrel?
 | Suitable for          | Windows on-prem                               | Cloud, Docker, cross-platform             |
 
 -------------------------------------------------------------
-Use() vs Add() vs Run() vs Map()?
+## Use() vs Add() vs Run() vs Map()?
 
 Use()
 
@@ -667,9 +783,10 @@ Branches the pipeline based on route/path.
 ● AddXXX()
 
 Registers services to DI and configures the application — not part of the HTTP pipeline.
+
 -------------------------------------------------------------
 
-ViewBag vs ViewData vs TempData?
+## ViewBag vs ViewData vs TempData?
 
 | Feature                | ViewData           | ViewBag           | TempData                |
 | ---------------------- | -----------------  | ----------------- | ----------------------- |
@@ -682,7 +799,7 @@ ViewBag vs ViewData vs TempData?
 
 -------------------------------------------------------------
 
-How Routing works in Asp.Net MVC vs Asp.Net Core MVC vs Asp.Net Core Web Api?
+## How Routing works in Asp.Net MVC vs Asp.Net Core MVC vs Asp.Net Core Web Api?
 
 | Feature            | ASP.NET MVC (Framework)      | ASP.NET Core MVC         | ASP.NET Core Web API |
 | ------------------ | ---------------------------- | ------------------------ | -------------------- |
@@ -697,7 +814,7 @@ How Routing works in Asp.Net MVC vs Asp.Net Core MVC vs Asp.Net Core Web Api?
 | Attribute Routing  | Optional (added in MVC5)     | Fully enabled            | Primary method       |
 
 -------------------------------------------------------------
-What is CORS?
+## What is CORS?
 
 CORS allows a server to specify which external origins can access its resources, 
 preventing unauthorized cross-domain attacks. 
@@ -721,8 +838,9 @@ When Should You Enable CORS?
 ✔ Different frontend + backend domains
 ✔ Microservices
 ✔ API Gateway to downstream services
+
 -------------------------------------------------------------
-What is a Reverse Proxy?
+## What is a Reverse Proxy?
 
 A Reverse Proxy is a server that sits between the client and backend services:
 
@@ -738,7 +856,7 @@ YARP (.NET reverse proxy)
 
 -------------------------------------------------------------
 
-SOAP vs REST?
+## SOAP vs REST?
 
 | Feature      | SOAP                       | REST                          |
 | ------------ | -------------------------- | ----------------------------- |
@@ -754,7 +872,7 @@ SOAP vs REST?
 
 -------------------------------------------------------------
 
-Global exception handling?
+## Global exception handling?
 
 Global exception handling in ASP.NET Core allows you to catch all unhandled exceptions in one central place, 
 instead of writing try-catch blocks everywhere in controllers or services.
@@ -864,7 +982,9 @@ Handled Globally
 
 
 -------------------------------------------------------------
-The Unit of Work (UoW) pattern:
+
+##  Unit of Work (UoW) pattern:
+
 Manages a group of repository transactions as a single atomic operation.
 
 In EF Core, the DbContext itself is a unit of work (because SaveChanges is transactional).
@@ -923,7 +1043,8 @@ public class ProductService
 }
 
 -------------------------------------------------------------
-Lazy vs Eager vs Explicit loading?
+
+## Lazy vs Eager vs Explicit loading?
 
 | Feature         | Eager Loading               | Lazy Loading                   | Explicit Loading         |
 | --------------- | --------------------------- | ------------------------------ | ------------------------ |
@@ -936,7 +1057,7 @@ Lazy vs Eager vs Explicit loading?
 
 -------------------------------------------------------------
 
-Task vs Thread vs async/await?
+## Task vs Thread vs async/await?
 
 | Feature    | Thread                  | Task                   | async/await                      |
 | ---------- | ----------------------- | ---------------------- | -------------------------------- |
@@ -949,7 +1070,7 @@ Task vs Thread vs async/await?
 
 -------------------------------------------------------------
 
-App performance tuning in .NET?
+## App performance tuning in .NET?
 
 Use AsNoTracking for read queries
 Avoid Lazy Loading → N+1 problem
@@ -1092,7 +1213,8 @@ Improves startup time.
 ✔ Enable HTTP/2 or HTTP/3 for better network performance.
 
 -------------------------------------------------------------
-Caching strategies?
+
+## Caching strategies?
 
 hat Is Caching?
 
@@ -1292,7 +1414,7 @@ Event-based invalidation (e.g., on DB change)
 
 -------------------------------------------------------------
 
-What is ACID?
+## What is ACID?
 
 ACID stands for Atomicity, Consistency, Isolation, Durability.
 It ensures that database transactions execute reliably.
@@ -1300,8 +1422,10 @@ Atomicity ensures all-or-nothing,
 consistency ensures rules are followed, 
 isolation ensures concurrency safety, 
 and durability ensures data is permanent after commit.
+
 -------------------------------------------------------------
-Normalization vs denormalization?
+
+## Normalization vs denormalization?
 
 normalization reduces redundancy by splitting data into multiple related tables, improving data integrity but requiring more joins.
 
