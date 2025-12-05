@@ -11,13 +11,20 @@ Thread safety
 
 ------------------------------------------------------------
 
-#Difference between .NET Framework & .NET Core
+## Difference between .NET Framework & .NET Core
 
+| .NET Framework     | .NET Core / .NET                              |
+| ------------------ | --------------------------------------------- |
+| Windows-only       | Cross-platform (Windows, Linux, Mac)          |
+| Not open-source    | Fully open-source                             |
+| Monolithic         | Modular (NuGet-based)                         |
+| Slower performance | High performance (Kestrel, JIT optimizations) |
+| Legacy             | Modern / future platform                      |
 
 
 -------------------------------------------------------------
 
-#What is Dependency Injection in .NET Core?
+## What is Dependency Injection in .NET Core?
 
 How does DI work internally?
 Register services (what types exist and their lifetimes).
@@ -40,7 +47,7 @@ Dispose scoped and transient disposables
 
 -------------------------------------------------------------
 
-#Service lifetimes – Transient, Scoped, Singleton
+## Service lifetimes – Transient, Scoped, Singleton
 
 A) Transient
 Creates a new instance every time
@@ -70,7 +77,7 @@ Only singleton/transient services are injected into middleware.
 Scoped services are not allowed
 
 -------------------------------------------------------------
-Key advantages of Dependency Injection (DI)
+## What are the key advantages of Dependency Injection (DI)
 
 Loose Coupling, modularity, testability, maintainability, and flexibility
 Easy Unit Testing (Mocking becomes simple)
@@ -80,14 +87,14 @@ Centralized Dependency Management
 Promotes SOLID Principles
 
 -------------------------------------------------------------
-what is mocking in Unit Testing ?
+## What is mocking in Unit Testing ?
 
 Mocking in NUnit means creating fake versions of dependencies 
 so you can test your class without using the real implementations 
 (like real database, email service, API calls, etc.).
 -------------------------------------------------------------
 
-Why Does the Test Pass Even When No Real Email Was Sent?
+## Why Does the Test Pass Even When No Real Email Was Sent?
 
 using NUnit.Framework;
 using Moq;
@@ -122,7 +129,8 @@ We do NOT test whether an email is actually delivered
 We test whether our class attempted to send the email correctly
 The email sending itself is tested in integration tests, not unit tests
 -------------------------------------------------------------
-Program.cs
+
+## Explian Program.cs files component ?
 
 WebApplication.CreateBuilder(args) sets up everything your application needs before it starts 
 running — configuration, DI, logging, and hosting environment.
@@ -149,7 +157,7 @@ builder.WebHost			Configure Kestrel, URLs, etc.
 
 -------------------------------------------------------------
 
-Diagram of ASP.NET Core Lifecycle
+## Explain ASP.NET Core Lifecycle
 
         +-----------------+
         | Program.cs/Main |
@@ -199,7 +207,7 @@ Diagram of ASP.NET Core Lifecycle
 
 -------------------------------------------------------------
 
-Explain the Request Pipeline in .NET Core
+## Explain the Request Pipeline in .NET Core
 
 The request pipeline in ASP.NET Core is a sequence of middleware components that an HTTP request 
 passes through before reaching an endpoint (controller, minimal API, Razor page), 
@@ -216,7 +224,7 @@ Modify the request or response
 
 -------------------------------------------------------------
 
-What is Middleware and how it executes?
+## What is Middleware and how it executes?
 
 A middleware is usually a class with:
 A constructor that receives the next middleware delegate
@@ -257,7 +265,7 @@ Only app.Run() creates a terminal middleware
 Meaning the pipeline ends there.
 
 -------------------------------------------------------------
-Short-Circuiting the Pipeline
+## What is Short-Circuiting the Pipeline ?
 
 A middleware can decide NOT to call the next middleware:
 
@@ -281,7 +289,8 @@ Returning static files early
 CORS failures
 
 -------------------------------------------------------------
-What are constructors?
+
+## What are constructors?
 A constructor is a special method inside a class that runs automatically 
 when you create (instantiate) an object.
 
@@ -294,7 +303,7 @@ Same name as the class
 No return type
 
 -------------------------------------------------------------
-Parameterized vs Non-parameterized constructors
+## Parameterized vs Non-parameterized constructors
 
 Feature				Non-parameterized				Parameterized
 Takes arguments			❌ No						✔ Yes
