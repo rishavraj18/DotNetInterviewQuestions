@@ -79,12 +79,12 @@ Scoped services are not allowed
 -------------------------------------------------------------
 ## What are the key advantages of Dependency Injection (DI)
 
-Loose Coupling, modularity, testability, maintainability, and flexibility
-Easy Unit Testing (Mocking becomes simple)
-Clean Code
-Better Extensibility
-Centralized Dependency Management
-Promotes SOLID Principles
+* Loose Coupling, modularity, testability, maintainability, and flexibility
+* Easy Unit Testing (Mocking becomes simple)
+* Clean Code
+* Better Extensibility
+* Centralized Dependency Management
+* Promotes SOLID Principles
 
 -------------------------------------------------------------
 ## What is mocking in Unit Testing ?
