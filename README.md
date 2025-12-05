@@ -1,6 +1,6 @@
 # DotNetInterviewQuestions
 
-#What is a string in C#? Why is it immutable?
+# What is a string in C#? Why is it immutable?
 
 Memory and performance optimization through interning.
 If strings were mutable:
