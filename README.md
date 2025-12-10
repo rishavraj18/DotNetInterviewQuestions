@@ -223,7 +223,7 @@ ASP.NET Core achieves massive scalability through a combination of:
 
 ------------------------------------------------------------
 
-What are different type of testing and tools to perform that ?
+## What are different type of testing and tools to perform that ?
 
 ![Types of testing in SDLC](/img/TestingTypes.JPG "Testing Types")
 
