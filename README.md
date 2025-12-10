@@ -127,6 +127,101 @@ You need List-specific features
 
 ------------------------------------------------------------
 
+## How concurrent request is handled in asp.net core app ? Which Tool is popular ?
+
+JMeter & K6 is the tool used for testing mostly.
+
+In ASP.NET Core, concurrency is handled through a combination of threading, async I/O, Kestrel’s event loop, and request isolation.
+
+ASP.NET Core handles concurrent requests using the Kestrel web server’s event-driven non-blocking I/O model. 
+Each request is executed on a CLR ThreadPool thread and when asynchronous operations occur, the thread is released to serve other requests. 
+ASP.NET Core ensures request isolation with Scoped DI, while concurrency in shared state must be managed using thread-safe constructs like 
+ConcurrentDictionary or locks.
+
+
+### Kestrel
+ASP.NET Core apps run on Kestrel, a high-performance, asynchronous server.
+Kestrel uses an I/O Completion Ports (IOCP) model so asynchronous operations don’t block threads.
+
+ASP.NET Core / Kestrel:<br/>
+
+1 request does not require a dedicated thread<br/>
+Threads exist only during CPU execution
+
+### Thread Pool – Request Execution
+
+When the request reaches your controller/middleware:<br/>
+
+* It is executed on a CLR ThreadPool thread.
+* ASP.NET Core reuses these threads to avoid creating new ones.
+* If your code uses async/await, the thread is released during I/O (DB query, HTTP call, file read).
+
+📌 Result:<br/>
+Other requests can use the same thread → high concurrency.
+
+### Async/Await Improves Concurrency
+
+await _dbContext.Users.ToListAsync();
+
+
+During the await:<br/>
+
+✔ The thread is returned to the thread pool<br/>
+✔ Kestrel serves other requests<br/>
+✔ When the I/O completes, the continuation runs on a thread pool thread<br/>
+
+📌 Important:<br/>
+Async provides concurrency even with few threads.<br/>
+
+### Request Isolation (No Shared State)
+
+* ASP.NET Core ensures one request cannot affect another because:<br/>
+* Each request has its own HttpContext
+* Scoped services are created per request
+* No shared global state unless explicitly added (Singletons)
+
+
+### Middleware Pipeline Executes Concurrently
+
+Request → Middleware 1 → Middleware 2 → Controller → Response<br/>
+
+Each request gets its own pipeline execution, so concurrency is not blocked unless:<br/>
+
+* You use lock
+* You do blocking calls (.Result or .Wait())
+* You call a Singleton service with shared state
+
+### You scale horizontally:
+
+* Kubernetes pods
+* Docker containers
+* Load balancers (NGINX, Azure LB, AWS ELB)
+* Autoscaling based on CPU/RPS
+
+
+### Handling Shared State (Thread Safety)
+
+| Scenario           | Safe Mechanism                            |
+| ------------------ | ----------------------------------------- |
+| Shared collections | `ConcurrentDictionary`, `ConcurrentQueue` |
+| Shared counters    | `Interlocked.Increment`                   |
+| Shared operations  | `lock` keyword                            |
+| EF DbContext       | **Not thread-safe**, use Scoped           |
+
+
+------------------------------------------------------------
+ASP.NET Core achieves massive scalability through a combination of:
+
+| Operation         | Requests/sec  |
+| ----------------- | ------------- |
+| Static text       | 5M–7M RPS     |
+| Minimal API       | 1.5M–3M RPS   |
+| Simple controller | 400k–800k RPS |
+| DB-backed API     | 20k–80k RPS   |
+
+
+------------------------------------------------------------
+
 ## Difference between .NET Framework & .NET Core
 
 | .NET Framework     | .NET Core / .NET                              |
