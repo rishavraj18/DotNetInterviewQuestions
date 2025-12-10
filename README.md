@@ -87,13 +87,13 @@ Because they are:
 
 * ICollection<T> → Add, remove, count items (Basic collection operations)
 
-* List<T> → A concrete, resizable array with full features, AddRange,RemoveAt(), Sort(), Find()
+* List<T> → A concrete, resizable array with full features, AddRange, RemoveAt(), Sort(), Find()
 
 ### Hierarchy Diagram
-IEnumerable<T>
-      ↑
- ICollection<T>
-      ↑
+IEnumerable<T><br/>
+      ↑<br/>
+ ICollection<T><br/>
+      ↑<br/>
     List<T>   (Concrete class)
 
 
