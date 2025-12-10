@@ -1290,145 +1290,142 @@ public class ProductService
 
 ## App performance tuning in .NET?
 
-Use AsNoTracking for read queries
-Avoid Lazy Loading → N+1 problem
-Use caching aggressively
-Reduce middleware pipeline
-Prefer async/await everywhere
-Optimize EF queries (Include, projections, filtering)
-Use Response Compression and Caching
-Reduce garbage collection pressure (Span/Pool/ValueTask)
-Profile your application regularly
-Use Redis for distributed cache & performance
+### 1) General Performance Tuning Principles
+
+* Use AsNoTracking for read queries
+* Avoid Lazy Loading → N+1 problem
+* Use caching aggressively
+* Reduce middleware pipeline
+* Prefer async/await everywhere
+* Optimize EF queries (Include, projections, filtering)
+* Use Response Compression and Caching
+* Reduce garbage collection pressure (Span/Pool/ValueTask)
+* Profile your application regularly
+* Use Redis for distributed cache & performance
 
 
-Code-Level Optimizations
-✔ Avoid unnecessary object allocations
-// Bad: allocates every loop iteration
-var list = new List<int>();
+### 2) Code-Level Optimizations
 
-// Good: specify capacity
-var list = new List<int>(1000);
+✔ Avoid unnecessary object allocations<br/>
+// Bad: allocates every loop iteration<br/>
+var list = new List<int>();<br/>
 
-✔ Use Span<T> / Memory<T> for high-performance memory operations (C# 7.2+).
-✔ Avoid boxing/unboxing
+// Good: specify capacity<br/>
+var list = new List<int>(1000);<br/>
 
-Use generics instead of object.
+✔ Use Span<T> / Memory<T> for high-performance memory operations (C# 7.2+).<br/>
+✔ Avoid boxing/unboxing<br/>
+* Use generics instead of object.<br/>
+✔ Use StringBuilder for string concatenation in loops.<br/>
+✔ Prefer asynchronous APIs<br/>
+* Async releases threads → more scalable APIs.
 
-✔ Use StringBuilder for string concatenation in loops.
-✔ Prefer asynchronous APIs
+### 3) ASP.NET Core Performance
 
-Async releases threads → more scalable APIs.
+✔ Use Response Caching<br/>
+* app.UseResponseCaching();<br/>
+[ResponseCache(Duration = 60)]<br/>
+public IActionResult GetData() => Ok();<br/>
 
-⚡ 3. ASP.NET Core Performance
-✔ Use Response Caching
-app.UseResponseCaching();
+✔ Enable Compression (Brotli/Gzip)<br/>
+* services.AddResponseCompression();<br/>
 
-[ResponseCache(Duration = 60)]
-public IActionResult GetData() => Ok();
+✔ Minimize Middleware<br/>
 
-✔ Enable Compression (Brotli/Gzip)
-services.AddResponseCompression();
+* Each middleware adds overhead. Remove unused ones.<br/>
 
-✔ Minimize Middleware
+✔ Use IHttpContextAccessor sparingly.<br/>
 
-Each middleware adds overhead. Remove unused ones.
+It’s expensive; inject HttpContext only where needed.<br/>
 
-✔ Use IHttpContextAccessor sparingly.
+### 4) Database Performance (EF Core)
 
-It’s expensive; inject HttpContext only where needed.
+✔ Use AsNoTracking for read-only queries<br/>
+* var data = context.Users.AsNoTracking().ToList();<br/>
 
-🗂 4. Database Performance (EF Core)
-✔ Use AsNoTracking for read-only queries
-var data = context.Users.AsNoTracking().ToList();
+✔ Avoid Lazy Loading → Causes N+1 issues<br/>
+* Prefer Eager or Explicit loading.<br/>
 
-✔ Avoid Lazy Loading → Causes N+1 issues
+✔ Use Compiled Queries for frequently-used queries<br/>
 
-Prefer Eager or Explicit loading.
+✔ Optimize LINQ Queries<br/>
+* Don’t evaluate on client side.<br/>
 
-✔ Use Compiled Queries for frequently-used queries
-✔ Optimize LINQ Queries
+✔ Index the database properly (Clustered, Non-Clustered)<br/>
 
-Don’t evaluate on client side.
+✔ Batch SaveChanges<br/>
+* await context.SaveChangesAsync();<br/>
+* Instead of saving inside loops.
 
-✔ Index the database properly (Clustered, Non-Clustered)
-✔ Batch SaveChanges
-await context.SaveChangesAsync();
+### 5) Multithreading & Async Improvements
 
+✔ Avoid blocking calls<br/>
 
-Instead of saving inside loops.
+❌ Task.Result<br/>
+❌ Task.Wait()<br/>
 
-🧵 5. Multithreading & Async Improvements
-✔ Avoid blocking calls
+Always use:<br/>
+✔ await<br/>
 
-❌ Task.Result
-❌ Task.Wait()
+✔ Use ValueTask for performance-critical async calls<br/>
 
-Always use:
-✔ await
+Reduces allocations for short-lived operations.<br/>
 
-✔ Use ValueTask for performance-critical async calls
+### 6) Caching Strategies
 
-Reduces allocations for short-lived operations.
+🔹 In-Memory Caching<br/>
+For small, frequently accessed data.<br/>
 
-🧰 6. Caching Strategies
-🔹 In-Memory Caching
+🔹 Distributed Cache (Redis)<br/>
+For multi-server deployments / microservices.<br/>
 
-For small, frequently accessed data.
+🔹 Output Caching (.NET 8 feature)<br/>
 
-🔹 Distributed Cache (Redis)
+🔹 Don’t cache large objects unnecessarily<br/>
 
-For multi-server deployments / microservices.
+Avoid LOH (Large Object Heap) pressure.<br/>
 
-🔹 Output Caching (.NET 8 feature)
-🔹 Don’t cache large objects unnecessarily
+### 7) Memory Optimizations
 
-Avoid LOH (Large Object Heap) pressure.
+✔ Remove unused DI services<br/>
+Every service consumes memory.<br/>
 
-📦 7. Memory Optimizations
-✔ Remove unused DI services
+✔ Clean up IDisposable<br/>
+Use:<br/>
+using var stream = ...<br/>
 
-Every service consumes memory.
+✔ Avoid large in-memory collections if not needed.<br/>
 
-✔ Clean up IDisposable
+✔ Use ArrayPool<T> / ObjectPool<T><br/>
+Reduces GC pressure.<br/>
 
-Use:
+### 8) Logging & Diagnostics
 
-using var stream = ...
+✔ Reduce logging level in Production<br/>
 
-✔ Avoid large in-memory collections if not needed.
-✔ Use ArrayPool<T> / ObjectPool<T>
+Use only:<br/>
+* Information
+* Error
+* Critical
 
-Reduces GC pressure.
+✔ Enable Application Insights / OpenTelemetry for tracing.<br/>
+✔ Use dotnet-trace, dotnet-dump, and dotnet-counters for performance profiling.<br/>
 
-🧪 8. Logging & Diagnostics
-✔ Reduce logging level in Production
-
-Use only:
-
-Information
-
-Error
-
-Critical
-
-✔ Enable Application Insights / OpenTelemetry for tracing.
-✔ Use dotnet-trace, dotnet-dump, and dotnet-counters for performance profiling.
-🖧 9. API Response Optimization
-✔ Return IAsyncEnumerable<T> for streaming large lists
-✔ Use Minimal APIs (lightweight compared to MVC)
-✔ Compress JSON (System.Text.Json faster than Newtonsoft)
+### 9)  API Response Optimization
+✔ Return IAsyncEnumerable<T> for streaming large lists<br/>
+✔ Use Minimal APIs (lightweight compared to MVC)<br/>
+✔ Compress JSON (System.Text.Json faster than Newtonsoft)<br/>
 services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.PropertyNamingPolicy = null);
 
-🏎 10. Deployment Optimizations
-✔ Enable ReadyToRun (AOT compilation)
+### 10) Deployment Optimizations
+✔ Enable ReadyToRun (AOT compilation)<br/>
 
-Improves startup time.
+Improves startup time.<br/>
 
-✔ Publish using --self-contained for runtime optimization.
-✔ Use Kestrel + Reverse Proxy (Nginx/IIS)
-✔ Enable HTTP/2 or HTTP/3 for better network performance.
+✔ Publish using --self-contained for runtime optimization.<br/>
+✔ Use Kestrel + Reverse Proxy (Nginx/IIS)<br/>
+✔ Enable HTTP/2 or HTTP/3 for better network performance.<br/>
 
 -------------------------------------------------------------
 
