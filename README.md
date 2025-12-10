@@ -9,10 +9,10 @@ Collections make it easy to add, remove, search, sort, and iterate over items.
 
 ### A) Non-Generic Collections
 
-ArrayList
-Hashtable
-Queue
-Stack
+* ArrayList
+* Hashtable
+* Queue
+* Stack
 
 
 ### B) Generic Collections
@@ -46,6 +46,84 @@ Because they are:
 * Changing one would accidentally change others referencing it.
 * Thread safety
 
+------------------------------------------------------------
+
+## Array vs List
+
+### Array
+
+* Fixed-size collection of items.
+* Fastest index-based data structure.
+* You need high performance
+* Best for fixed-size data.
+* No resize overhead.
+
+### List<T>
+
+* A dynamic, resizable collection built on top of an array.
+* Automatically grows as items are added.
+* Prefer flexibility over raw speed
+* Internally uses an array that auto-grows.
+* When List grows, it:
+     Allocates a new larger array
+     Copies old data → costly operation
+
+| Feature          | Array               | List<T>                            |
+| ---------------- | ------------------- | ---------------------------------- |
+| Size             | Fixed               | Dynamic (auto-resizes)             |
+| Type Safety      | Yes                 | Yes                                |
+| Performance      | Faster for indexing | Slight overhead                    |
+| Memory           | Less memory         | Extra memory allocated             |
+| Flexibility      | Less flexible       | More flexible                      |
+| Built-in Methods | Few                 | Many (Add, Remove, Contains, etc.) |
+| Usage            | Simple data storage | Complex dynamic collections        |
+| LINQ Support     | Works but limited   | Works naturally                    |
+
+------------------------------------------------------------
+
+## List<T> vs ICollection vs IEnumerable
+
+* IEnumerable<T> → Read-only iteration (You can loop through items)
+
+* ICollection<T> → Add, remove, count items (Basic collection operations)
+
+* List<T> → A concrete, resizable array with full features, AddRange,RemoveAt(), Sort(), Find()
+
+### Hierarchy Diagram
+IEnumerable<T>
+      ↑
+ ICollection<T>
+      ↑
+    List<T>   (Concrete class)
+
+
+| Feature            | IEnumerable<T> | ICollection<T> | List<T>      |
+| ------------------ | -------------- | -------------- | ------------ |
+| Supports iteration | ✔              | ✔              | ✔            |
+| Add/Remove items   | ❌              | ✔              | ✔            |
+| Count              | ❌              | ✔              | ✔            |
+| Index access       | ❌              | ❌              | ✔            |
+| Lazy evaluation    | ✔              | ✔              | ✔            |
+| Interface or class | Interface      | Interface      | Class        |
+| Modify collection  | ❌              | ✔              | ✔            |
+| When to use        | Read-only      | Modify items   | Full control |
+
+
+
+* Return IEnumerable<T> when:
+
+You want to give read-only access
+LINQ deferred execution is needed
+
+* Return ICollection<T> when:
+
+You want to allow collection modification
+But want to hide implementation (good abstraction)
+
+* Return List<T> when:
+
+Caller needs indexing
+You need List-specific features
 
 ------------------------------------------------------------
 
