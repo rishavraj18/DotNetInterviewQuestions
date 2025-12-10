@@ -175,7 +175,8 @@ Async provides concurrency even with few threads.<br/>
 
 ### Request Isolation (No Shared State)
 
-* ASP.NET Core ensures one request cannot affect another because:<br/>
+ASP.NET Core ensures one request cannot affect another because:<br/>
+
 * Each request has its own HttpContext
 * Scoped services are created per request
 * No shared global state unless explicitly added (Singletons)
@@ -208,8 +209,8 @@ Each request gets its own pipeline execution, so concurrency is not blocked unle
 | Shared operations  | `lock` keyword                            |
 | EF DbContext       | **Not thread-safe**, use Scoped           |
 
+<br/>
 
-------------------------------------------------------------
 ASP.NET Core achieves massive scalability through a combination of:
 
 | Operation         | Requests/sec  |
@@ -218,6 +219,13 @@ ASP.NET Core achieves massive scalability through a combination of:
 | Minimal API       | 1.5M–3M RPS   |
 | Simple controller | 400k–800k RPS |
 | DB-backed API     | 20k–80k RPS   |
+
+
+------------------------------------------------------------
+
+What are different type of testing and tools to perform that ?
+
+![Types of testing in SDLC](/img/TestingTypes.JPG "Testing Types")
 
 
 ------------------------------------------------------------
