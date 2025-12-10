@@ -1,12 +1,50 @@
 # DotNetInterviewQuestions
 
+## What is Collection ?
+
+A collection in .NET is an object/ data type that stores and manages groups of related items (values or objects). 
+Collections make it easy to add, remove, search, sort, and iterate over items.
+
+### Types:
+
+### A) Non-Generic Collections
+
+ArrayList
+Hashtable
+Queue
+Stack
+
+
+### B) Generic Collections
+
+| Collection                 | Description    |
+| -------------------------- | -------------- |
+| `List<T>`                  | Dynamic array  |
+| `Dictionary<TKey, TValue>` | Key-value pair |
+| `HashSet<T>`               | Unique items   |
+| `Queue<T>`                 | FIFO           |
+| `Stack<T>`                 | LIFO           |
+| `SortedList<TKey, TValue>` | Sorted by key  |
+
+------------------------------------------------------------
+
+## Why to prefer Generic Collections?
+
+Because they are:
+
+* Type-safe
+* Faster (no boxing/unboxing)
+* More flexible
+* Easier to use with LINQ
+
+------------------------------------------------------------
+
 ## What is a string in C#? Why is it immutable?
 
-Memory and performance optimization through interning.
-If strings were mutable:
-Changing one would accidentally change others referencing it.
-
-Thread safety
+* Memory and performance optimization through interning.
+* If strings were mutable:
+* Changing one would accidentally change others referencing it.
+* Thread safety
 
 
 ------------------------------------------------------------
@@ -24,9 +62,8 @@ Thread safety
 
 -------------------------------------------------------------
 
-## What is Dependency Injection in .NET Core?
+## What is Dependency Injection in .NET Core? How does DI work internally?
 
-How does DI work internally?
 Register services (what types exist and their lifetimes).
 Build a dependency graph (resolve constructor parameters).
 Create instances (construct objects in the correct order).
@@ -1216,7 +1253,7 @@ Improves startup time.
 
 ## Caching strategies?
 
-hat Is Caching?
+What Is Caching?
 
 Caching is the technique of storing frequently accessed data in fast storage (memory, Redis, file) so future requests can access it quickly without recomputing or hitting the database.
 
