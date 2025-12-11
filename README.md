@@ -1,5 +1,114 @@
 # DotNetInterviewQuestions
 
+## Difference between .NET Framework & .NET Core
+
+| .NET Framework     | .NET Core / .NET                              |
+| ------------------ | --------------------------------------------- |
+| Windows-only       | Cross-platform (Windows, Linux, Mac)          |
+| Not open-source    | Fully open-source                             |
+| Monolithic         | Modular                         |
+| Slower performance | High performance (Kestrel, JIT optimizations) |
+| Legacy             | Modern / future platform                      |
+
+
+-------------------------------------------------------------
+
+## ASP.NET Core runtime & architecture
+
+ASP.NET Core handles requests through a pipeline of middleware components. Each middleware either handles the request or calls the next middleware. The pipeline is built in Program.cs using app.Use..., app.Run, app.Map etc.<br/>
+
+### Key points:<br/>
+
+* app.Use(...) registers middleware that can call await next() to continue pipeline.
+* app.Run(...) registers terminal middleware — it does not call next.
+* app.Map(path, branch) branches the pipeline for a URL prefix.
+* Middleware order matters — authorization must appear after authentication, exception handling early, static files before MVC if you want static to serve first.
+
+### Kestrel & reverse proxies<br/>
+
+* Kestrel is the cross-platform web server shipped with ASP.NET Core. It can be exposed directly to the internet but in production many use a reverse proxy (Nginx/IIS/Apache) for features like TLS termination, process management, static file caching, or advanced routing.
+* Reverse proxy + Kestrel is recommended for Windows/IIS scenarios or when you need web server features not provided by Kestrel.
+
+### Hosting vs background services
+
+* IHostedService is the primitive for background services. BackgroundService is a helper abstract class implementing IHostedService that provides a long-running task hook (ExecuteAsync).
+* Use IHostedService for lifecycle control; BackgroundService for polling jobs, timed tasks, etc. Be careful with shutting down gracefully (honor CancellationToken).
+
+-------------------------------------------------------------
+
+## Explain Hosting vs background services in ASP.NET Core ?
+
+### Hosting is the infrastructure layer that initializes and manages the lifetime of an ASP.NET Core application. Environment where your entire ASP.NET Core app runs.
+
+#### Hosting is responsible for:
+
+* Starting the web server (Kestrel)
+* Reading configuration (appsettings.json, environment vars)
+* Registering services (DI container)
+* Middleware pipeline creation
+* Logging infrastructure setup
+* Lifetime management (start → run → stop)
+* Running hosted background services (IHostedService, BackgroundService)
+
+
+#### Hosting is configured using:
+
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+app.Run();
+
+### Background services are long-running tasks that run in the background alongside the web app. Long-running worker running inside the host lifecycle.
+
+#### Implemented using:
+
+* IHostedService
+* BackgroundService (recommended)
+* PeriodicTimer
+* Worker Service Template (.NET Generic Host)
+
+
+#### Examples:
+
+* Sending emails
+* Processing a queue (e.g., RabbitMQ, Kafka)
+* Running scheduled jobs
+* Cleaning expired files/tokens
+* Caching refresh tasks
+
+
+#### Example BackgroundService:
+
+public class EmailProcessor : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            Console.WriteLine("Processing emails...");
+            await Task.Delay(5000, stoppingToken);
+        }
+    }
+}
+
+Register:<br/>
+
+builder.Services.AddHostedService<EmailProcessor>();
+
+
+| Feature             | Hosting                               | Background Services                           |
+| ------------------- | ------------------------------------- | --------------------------------------------- |
+| **Purpose**         | Manages entire app startup & lifetime | Runs long-running or periodic tasks           |
+| **Scope**           | Whole application                     | A single worker/task                          |
+| **Runs**            | Once at application start             | Entire application lifetime but in background |
+| **Created using**   | WebApplication / HostBuilder          | IHostedService / BackgroundService            |
+| **Responsible for** | Kestrel, DI, Logging, Config          | Queue processing, jobs, recurring tasks       |
+| **Stops when**      | Application stops                     | Application stops or service cancelled        |
+| **Example**         | `app.Run()`                           | Email sender, RabbitMQ consumer               |
+
+
+
+-------------------------------------------------------------
+
 ## What is Collection ?
 
 A collection in .NET is an object/ data type that stores and manages groups of related items (values or objects). 
@@ -229,19 +338,6 @@ ASP.NET Core achieves massive scalability through a combination of:
 
 
 ------------------------------------------------------------
-
-## Difference between .NET Framework & .NET Core
-
-| .NET Framework     | .NET Core / .NET                              |
-| ------------------ | --------------------------------------------- |
-| Windows-only       | Cross-platform (Windows, Linux, Mac)          |
-| Not open-source    | Fully open-source                             |
-| Monolithic         | Modular (NuGet-based)                         |
-| Slower performance | High performance (Kestrel, JIT optimizations) |
-| Legacy             | Modern / future platform                      |
-
-
--------------------------------------------------------------
 
 ## What is Dependency Injection in .NET Core? How does DI work internally?
 
