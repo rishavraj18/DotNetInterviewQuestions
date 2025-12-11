@@ -53,9 +53,11 @@ ASP.NET Core handles requests through a pipeline of middleware components. Each 
 
 #### Hosting is configured using:
 
+ ```csharp
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 app.Run();
+ ```
 
 ### Background services are long-running tasks that run in the background alongside the web app. Long-running worker running inside the host lifecycle.
 
