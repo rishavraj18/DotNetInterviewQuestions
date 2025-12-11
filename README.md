@@ -542,7 +542,7 @@ POST /orders
 -------------------------------------------------------------
 
 
-## Global exception handling?
+## Global exception handling ?
 
 Global exception handling centralizes error handling for the entire application. In ASP.NET Core, it is implemented using UseExceptionHandler(), custom exception middleware, or MVC exception filters. The preferred method is middleware because it captures all exceptions across the entire request pipeline and ensures consistent logging and error responses.<br/>
 
@@ -553,7 +553,7 @@ It ensures:<br/>
 ✔ No leaking of stack traces to clients<br/>
 
 
-### Why Do We Need Global Exception Handling?
+### Why Do We Need Global Exception Handling ?
 
 Without global handling, every unhandled exception:
 * Crashes the request
@@ -699,15 +699,239 @@ Handled Globally
 
 -------------------------------------------------------------
 
+## Logging in Asp.Net Core ?
+
+* Most commonly used (default in every ASP.NET Core app). 
+* Lightweight, fast, structured, and integrated with DI.
+* Works with: Console, Debug, EventLog, Azure, Application Insights.
+
+This is what most enterprise apps use, often with an external provider like Serilog plugged in.
+
+Serilog (Most Popular Third-Party Logger)
+
+### Why Serilog is popular?
+
+* Structured logging (JSON logs)
+* Powerful sinks (write to DB, Elasticsearch, File, Seq, Graylog, Splunk, etc.)
+* Enrichers (add machine name, request id, user, IP)
+* Simple configuration in Program.cs
+* Excellent for production logging
+
+### Usages: 
+Microservices
+Cloud apps (Kubernetes, Docker)
+APIs with centralized logging
+
+### Nuget package Serilog.AspNetCore, Serilog.Sinks
+
+### Program.cs
+
+```csharp
+using Serilog;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// 1️⃣ Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)     // read from appsettings.json
+    .Enrich.FromLogContext()                           // include RequestId, CorrelationId, etc.
+    .WriteTo.Console()
+    .WriteTo.File("logs/app.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7)
+    .CreateLogger();
+
+// 2️⃣ Replace default logging with Serilog
+builder.Host.UseSerilog();
+
+var app = builder.Build();
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
+```
+
+### appsettings.json
+
+```csharp
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "System": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console"
+      },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "logs/log-.txt",
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 7
+        }
+      }
+    ],
+    "Enrich": [ "FromLogContext", "WithMachineName", "WithThreadId" ]
+  }
+}
+```
+
+### Logging Inside Controllers / Services:
+
+```csharp
+public class TestService
+{
+    private readonly ILogger<TestService> _logger;
+
+    public TestService(ILogger<TestService> logger)
+    {
+        _logger = logger;
+    }
+
+    public void DoWork()
+    {
+        _logger.LogInformation("Doing some work at {Time}", DateTime.UtcNow);
+    }
+}
+```
+
+### Enable Request Logging:
+
+* HTTP method
+* URL
+* Response time
+* Status code
+* Exceptions
+
+```csharp
+app.UseSerilogRequestLogging();
+```
+
+-------------------------------------------------------------
+
+## How SeriLog Logging in Asp.Net Core working actually ?
+
+e.g.
+
+```csharp
+_logger.LogInformation("Doing some work at {Time}", DateTime.UtcNow);
+```
+
+
+```csharp
+_logger.LogInformation(...) // This goes through the standard Microsoft.Extensions.Logging pipeline.
+```
+
+But because we configured:
+
+```csharp
+builder.Host.UseSerilog();
+```
+
+ASP.NET Core automatically forwards all log messages to Serilog’s sinks (console, file).
+
+-------------------------------------------------------------
+
+## Why placeholders matter ({Time}) ?
+
+```csharp
+Doing some work at {Time}
+```
+
+Serilog cannot extract structured properties → It becomes plain text and cannot be filtered or queried later.
+
+Using {PropertyName} creates structured logs, usable in:<br/>
+
+* Kibana (Elasticsearch)
+* Seq
+* Loki / Grafana
+* Splunk
+* Datadog
+
+-------------------------------------------------------------
+
+## What is ELK ?
+
+ELK is a centralized logging stack made of Elasticsearch, Logstash, and Kibana. Elasticsearch stores and searches logs, Logstash collects and transforms logs, and Kibana visualizes logs and helps in monitoring and debugging systems. It is widely used for log aggregation, analytics, and observability in distributed applications.
+It is widely used with ASP.NET Core, microservices, Docker, and cloud environments.<br/>
+
+
+### Elasticsearch
+
+A distributed search and analytics engine.
+
+* Stores logs as JSON documents
+* Fast full-text search
+* Distributed, scalable cluster
+* Used to query millions of logs quickly
+* Nuget Serilog.Sinks.Elasticsearch
+
+Think of it as a large, scalable NoSQL database optimized for search.<br/>
+
+### Logstash
+
+A data processing pipeline.<br/>
+
+* Collects logs
+* Parses/filters/transforms them
+* Sends them to Elasticsearch
+
+It can read from:<br/>
+
+* Files
+* TCP/UDP
+* Kafka
+* Beats
+* Syslog
+* Application log forwarders<br/>
+
+Logstash = log collector + transformer + shipper.<br/>
+
+### Kibana
+
+A visualization and dashboard tool.
+
+* Shows logs stored in Elasticsearch
+* Provides dashboards, graphs, alerts
+* Helps developers analyze issues
+* Used for monitoring services, failures, performance<br/>
+
+Kibana = UI for searching logs and building dashboards.
+
+```csharp
+App → Logstash → Elasticsearch → Kibana
+```
+
+### Use Cases:
+
+* Tracking API errors and exceptions
+* Monitoring performance issues
+* Auditing user activity
+* Analyzing request logs
+* Debugging distributed microservice issues
+* Alerting on failures (via Elastic alerts)
+
+### Why ELK is popular?
+
+* Centralized logging across many services
+* Super fast searching & filtering
+* JSON-based structured logs work perfectly with Serilog, NLog, etc.
+* Great visualization dashboards
+* Scales horizontally
+* Works perfectly with microservices & Kubernetes
+
+-------------------------------------------------------------
+
 ## What is mocking in Unit Testing ?
 
 Mocking in NUnit means creating fake versions of dependencies 
 so you can test your class without using the real implementations 
 (like real database, email service, API calls, etc.).
-
--------------------------------------------------------------
-
-## Why Does the Test Pass Even When No Real Email Was Sent?
 
 ```csharp
 using NUnit.Framework;
@@ -735,6 +959,10 @@ public class UserServiceTests
     }
 }
 ```
+
+-------------------------------------------------------------
+
+## Why Does the Test Pass Even When No Real Email Was Sent?
 
 Because unit testing is NOT meant to test external systems(like email server, SMTP, database, API).
 Unit test should test only the logic inside your class, not the dependencies.<br/>
