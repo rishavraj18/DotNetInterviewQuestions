@@ -347,9 +347,11 @@ ASP.NET Core achieves massive scalability through a combination of:
 
 ## What is Dependency Injection in .NET Core? How does DI work internally?
 
-Register services (what types exist and their lifetimes).
-Build a dependency graph (resolve constructor parameters).
-Create instances (construct objects in the correct order).
+ASP.NET Core has a built-in DI container with three lifetimes: Transient, Scoped, Singleton.
+
+* Register services (what types exist and their lifetimes).
+* Build a dependency graph (resolve constructor parameters).
+* Create instances (construct objects in the correct order).
 
 When Registering:
 Store metadata (type → implementation → lifetime)
@@ -417,6 +419,7 @@ Scoped services are not allowed
 (e.g., helpers, utilities, mappers)
 
 -------------------------------------------------------------
+
 ## What are the key advantages of Dependency Injection (DI)
 
 * Loose Coupling, modularity, testability, maintainability, and flexibility
@@ -427,6 +430,117 @@ Scoped services are not allowed
 * Promotes SOLID Principles
 
 -------------------------------------------------------------
+
+## What is Captive dependency problem ?
+
+* Happens when a singleton depends on a scoped service. The scoped dependency is "captured" and effectively promoted to singleton lifetime, causing incorrect behavior and potential memory leaks or thread-safety issues.
+* Avoid by not injecting scoped services into singletons. Use factories (IServiceProvider.CreateScope) or IOptions/configuration approaches.
+
+-------------------------------------------------------------
+
+## What is Constructor vs property/method injection ?
+
+* Constructor injection is preferred for required dependencies — makes dependencies explicit and immutable.
+* Property/method injection used for optional or circular dependencies, but should be avoided where possible.
+
+-------------------------------------------------------------
+
+## When it is required to Replace DI container ?
+
+* Built-in container is fine for most tasks. Use Autofac when you need advanced features (module scanning, property injection patterns, lifetime scopes with advanced control).
+* Example of avoiding captive dependency:
+
+```csharp
+public class MySingleton
+{
+    private readonly IServiceProvider _sp;
+    public MySingleton(IServiceProvider sp) { _sp = sp; }
+
+    public void DoWork()
+    {
+        using var scope = _sp.CreateScope();
+        var scopedService = scope.ServiceProvider.GetRequiredService<IMyScoped>();
+        scopedService.Do();
+    }
+}
+```
+
+-------------------------------------------------------------
+
+## What is “Safe” in REST?
+
+A Safe HTTP method means:<br/>
+
+➡ It does NOT change the server state<br/>
+➡ It is read-only<br/>
+➡ Repeated calls do not have side effects on data<br/>
+eg. GET, HEAD<br/>
+
+Calling below once or 100 times → no change to the resource.
+
+```csharp
+GET /api/products/10
+```
+
+-------------------------------------------------------------
+
+## What is “Idempotent” in REST?
+
+A method is Idempotent if:<br/>
+
+➡ Running it once or multiple times has the same effect on the resource<br/>
+➡ The final state on the server is identical<br/>
+eg. PUT, DELETE, GET<br/>
+
+1st call → Updates user → final state = John, 30<br/>
+10th call → Same update → final state still = John, 30<br/>
+
+```csharp
+PUT /api/users/10
+Body: { "name": "John", "age": 30 }
+```
+
+-------------------------------------------------------------
+
+## Is POST Safe or Idempotent?
+
+❌ POST is not safe<br/>
+POST modifies server state (e.g., creates new resource)<br/>
+
+❌ POST is not idempotent<br/>
+Each call creates a new item.<br/>
+
+Calling 3 times may create 3 orders → final state is different.<br/>
+
+```csharp
+POST /orders
+```
+
+-------------------------------------------------------------
+
+## Idempotent vs Safe:
+
+| Principle                  | Meaning                                            | Typical Methods  |
+| -------------------------- | -------------------------------------------------- | ---------------- |
+| **Safe**                   | Operation **does not change** server state         | GET, HEAD        |
+| **Idempotent**             | Multiple identical requests → **same final state** | GET, PUT, DELETE |
+| **All Safe = Idempotent?** | Yes                                                | GET              |
+| **All Idempotent = Safe?** | No                                                 | DELETE, PUT      |
+
+
+-------------------------------------------------------------
+
+## HEAD vs OPTIONS vs TRACE
+
+| Method      | Safe | Idempotent | Purpose                             | Typical Use                           |
+| ----------- | ---- | ---------- | ----------------------------------- | ------------------------------------- |
+| **HEAD**    | Yes  | Yes        | Same as GET but without body        | Check resource metadata, existence    |
+| **OPTIONS** | Yes  | Yes        | Returns allowed methods + CORS info | Preflight, API capability discovery   |
+| **TRACE**   | Yes  | Yes        | Echo request for debugging          | Debug proxies; disabled in production |
+
+
+-------------------------------------------------------------
+
 ## What is mocking in Unit Testing ?
 
 Mocking in NUnit means creating fake versions of dependencies 
