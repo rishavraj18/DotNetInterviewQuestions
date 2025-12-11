@@ -541,6 +541,164 @@ POST /orders
 
 -------------------------------------------------------------
 
+
+## Global exception handling?
+
+Global exception handling centralizes error handling for the entire application. In ASP.NET Core, it is implemented using UseExceptionHandler(), custom exception middleware, or MVC exception filters. The preferred method is middleware because it captures all exceptions across the entire request pipeline and ensures consistent logging and error responses.<br/>
+
+It ensures:<br/>
+✔ Unified error responses<br/>
+✔ Logging in a single place<br/>
+✔ Cleaner, maintainable code<br/>
+✔ No leaking of stack traces to clients<br/>
+
+
+### Why Do We Need Global Exception Handling?
+
+Without global handling, every unhandled exception:
+* Crashes the request
+* Produces random HTTP 500 pages
+* Returns inconsistent responses
+* Pollutes logs
+
+With global handling:
+* One middleware handles ALL exceptions
+* Standard error format
+* Consistent HTTP status codes
+
+<br/>
+
+| Approach                        | When to Use                                   |
+| ------------------------------- | --------------------------------------------- |
+| **UseExceptionHandler()**       | Most production-ready apps; simple + reliable |
+| **Custom Exception Middleware** | Pure APIs, microservices, need custom JSON    |
+| **Filters**                     | Only inside MVC, not global pipeline          |
+
+
+* Using UseExceptionHandler() (Built-in Middleware)
+
+Best for APIs and MVC apps.<br/>
+
+#### Program.cs:
+
+```csharp
+app.UseExceptionHandler("/error");
+```
+
+#### ErrorController.cs
+
+```csharp
+[ApiController]
+public class ErrorController : ControllerBase
+{
+    [Route("error")]
+    public IActionResult HandleError() =>
+        Problem();  // Returns RFC 7807 standard error response
+}
+```
+
+Advantages:<br/>
+1) Clean<br/>
+2) Built-in<br/>
+3) Recommended for production<br/>
+
+* Custom Exception Handling Middleware<br/>
+
+Used when you want full control.<br/>
+
+#### Middleware:
+
+```csharp
+public class GlobalExceptionMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger _logger;
+
+    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
+    public async Task Invoke(HttpContext context)
+    {
+        try
+        {
+            await _next(context); // call next middleware
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception");
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+
+            var response = new { message = "Something went wrong." };
+            await context.Response.WriteAsJsonAsync(response);
+        }
+    }
+}
+```
+
+#### Register:
+
+```csharp
+app.UseMiddleware<GlobalExceptionMiddleware>();
+```
+
+Advantages:<br/>
+✔ Full control over logging<br/>
+✔ Custom JSON format<br/>
+✔ Great for APIs<br/>
+
+* Exception Filters (Only MVC, Not Middleware)
+
+#### Runs only for MVC controllers.
+
+```csharp
+public class GlobalExceptionFilter : IExceptionFilter
+{
+    public void OnException(ExceptionContext context)
+    {
+        context.Result = new ObjectResult(new { message = "Error occurred" })
+        {
+            StatusCode = 500
+        };
+        context.ExceptionHandled = true;
+    }
+}
+```
+
+#### Register:
+
+```csharp
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<GlobalExceptionFilter>();
+});
+```
+
+#### Global Exception Handling Flow (Request Pipeline):
+
+```csharp
+Client
+ ↓
+Middleware Pipeline
+ ↓
+Custom Exception Middleware (catches all)
+ ↓
+Routing
+ ↓
+MVC (Action Filters → Exception Filters)
+ ↓
+Controller Action
+ ↓
+Exception Occurs
+ ↑
+Handled Globally
+```
+
+-------------------------------------------------------------
+
 ## What is mocking in Unit Testing ?
 
 Mocking in NUnit means creating fake versions of dependencies 
@@ -551,6 +709,7 @@ so you can test your class without using the real implementations
 
 ## Why Does the Test Pass Even When No Real Email Was Sent?
 
+```csharp
 using NUnit.Framework;
 using Moq;
 
@@ -575,14 +734,15 @@ public class UserServiceTests
         );
     }
 }
+```
 
 Because unit testing is NOT meant to test external systems(like email server, SMTP, database, API).
-Unit test should test only the logic inside your class, not the dependencies.
+Unit test should test only the logic inside your class, not the dependencies.<br/>
 
-In unit testing:
-We do NOT test whether an email is actually delivered
-We test whether our class attempted to send the email correctly
-The email sending itself is tested in integration tests, not unit tests
+In unit testing:<br/>
+* We do NOT test whether an email is actually delivered
+* We test whether our class attempted to send the email correctly
+* The email sending itself is tested in integration tests, not unit tests
 
 -------------------------------------------------------------
 
@@ -1306,116 +1466,6 @@ YARP (.NET reverse proxy)
 
 -------------------------------------------------------------
 
-## Global exception handling?
-
-Global exception handling in ASP.NET Core allows you to catch all unhandled exceptions in one central place, 
-instead of writing try-catch blocks everywhere in controllers or services.
-
-
-Why Do We Need Global Exception Handling?
-
-Without global handling, every unhandled exception:
-Crashes the request
-Produces random HTTP 500 pages
-Returns inconsistent responses
-Pollutes logs
-
-With global handling:
-One middleware handles ALL exceptions
-Standard error format
-Consistent HTTP status codes
-
-| Approach                        | When to Use                                   |
-| ------------------------------- | --------------------------------------------- |
-| **UseExceptionHandler()**       | Most production-ready apps; simple + reliable |
-| **Custom Exception Middleware** | Pure APIs, microservices, need custom JSON    |
-| **Filters**                     | Only inside MVC, not global pipeline          |
-
-
-Using UseExceptionHandler() (Built-in Middleware)
-
-Best for APIs and MVC apps.
-
-Program.cs:
-
-app.UseExceptionHandler("/error");
-
-
-ErrorController.cs
-
-[ApiController]
-public class ErrorController : ControllerBase
-{
-    [Route("error")]
-    public IActionResult HandleError() =>
-        Problem();  // Returns RFC 7807 standard error response
-}
-
-
-✔ Clean
-✔ Built-in
-✔ Recommended for production
-
-🔷 2. Custom Exception Handling Middleware
-
-Used when you want full control.
-
-Middleware:
-
-public class GlobalExceptionMiddleware
-{
-    private readonly RequestDelegate _next;
-    private readonly ILogger _logger;
-
-    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
-
-    public async Task Invoke(HttpContext context)
-    {
-        try
-        {
-            await _next(context); // call next middleware
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled exception");
-            context.Response.StatusCode = 500;
-            context.Response.ContentType = "application/json";
-
-            var response = new { message = "Something went wrong." };
-            await context.Response.WriteAsJsonAsync(response);
-        }
-    }
-}
-
-
-Register it:
-
-app.UseMiddleware<GlobalExceptionMiddleware>();
-
-
-
-Client
- ↓
-Middleware Pipeline
- ↓
-Custom Exception Middleware (catches all)
- ↓
-Routing
- ↓
-MVC (Action Filters → Exception Filters)
- ↓
-Controller Action
- ↓
-Exception Occurs
- ↑
-Handled Globally
-
-
--------------------------------------------------------------
 
 ##  Unit of Work (UoW) pattern:
 
