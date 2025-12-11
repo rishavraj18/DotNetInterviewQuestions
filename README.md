@@ -80,6 +80,7 @@ app.Run();
 
 #### Example BackgroundService:
 
+```csharp
 public class EmailProcessor : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -91,10 +92,13 @@ public class EmailProcessor : BackgroundService
         }
     }
 }
+```
 
 Register:<br/>
 
+```csharp
 builder.Services.AddHostedService<EmailProcessor>();
+```
 
 
 | Feature             | Hosting                               | Background Services                           |
