@@ -73,6 +73,16 @@ Native Machine Code
 | `ExceptWith(set)`    | Remove overlapping items |
 
 
+### Generic Collection Methods (Stack<T>)
+
+| Method       | Purpose         |
+| ------------ | --------------- |
+| `Push(item)` | Add to stack    |
+| `Pop()`      | Remove from top |
+| `Peek()`     | Look at top     |
+| `Clear()`    | Remove all      |
+
+
 ### Generic Collection Methods (Queue<T>)
 
 
