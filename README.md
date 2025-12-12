@@ -23,6 +23,105 @@ Native Machine Code
 (x64 / ARM / Windows / Linux)
  ```
  -------------------------------------------------------------
+ ## Program.cs
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+ ```
+
+✔ Creates the application builder<br/>
+
+This is the entry point for configuring:<br/>
+
+* Services (Dependency Injection)
+* Logging
+* Configuration (appsettings.json, environment variables)
+
+✔ Internally it sets up:<br/>
+
+* DI Container → builder.Services
+* Configuration → builder.Configuration
+* Logging → builder.Logging
+* Hosting environment → builder.Environment
+
+In simple words:<br/>
+This line prepares everything needed to build the ASP.NET Core application.<br/>
+
+```csharp
+var app = builder.Build();
+```
+
+✔ Builds the WebApplication object<br/>
+
+After configuring services, this line builds the HTTP pipeline.<br/>
+
+Internally:<br/>
+
+* Creates middleware pipeline
+* Wires services into the DI container
+* Finalizes hosting model
+
+In simple words:<br/>
+Creates the actual web application that will handle incoming HTTP requests.<br/>
+
+```csharp
+app.UseAuthorization();
+```
+
+✔ Adds Authorization Middleware to the pipeline<br/>
+
+This middleware checks:
+
+* If the user is authenticated
+* If the user is allowed (based on [Authorize] attributes, roles, policies)
+
+Important:<br/>
+
+Authorization ≠ Authentication<br/>
+Authentication: Who are you? (Identity)<br/>
+Authorization: What can you do? (Permissions)<br/>
+
+In simple words:
+
+Enforces access rules before controllers run.<br/>
+
+```csharp
+app.MapControllers();
+```
+
+✔ Maps controller endpoints to the routing system<br/>
+
+Enables attribute routing:<br/>
+
+```csharp
+[HttpGet("api/products")]
+public IActionResult GetProducts() { ... }
+```
+
+It tells ASP.NET Core:<br/>
+
+* Activate all controllers with [ApiController] and route their endpoints.
+* Without this line → no controller endpoints work.
+
+```csharp
+app.Run();
+```
+
+✔ Starts the web application and begins listening for HTTP requests<br/>
+
+This is the terminal middleware in the pipeline.<br/>
+
+The app will:<br/>
+
+* Start Kestrel web server
+* Begin processing incoming requests
+* Block the thread until app shuts down
+
+In simple words:<br/>
+This line starts your API server.<br/>
+
+ -------------------------------------------------------------
+
  ## Interface vs Abstract class
 
 | Feature                              | **Interface**                                       | **Abstract Class**                                        |
