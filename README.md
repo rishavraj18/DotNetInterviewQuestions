@@ -22,8 +22,107 @@ JIT Compilation
 Native Machine Code
 (x64 / ARM / Windows / Linux)
  ```
+ -------------------------------------------------------------
+ ## Generic collections
 
-## Difference between .NET Framework & .NET Core
+* Generic collections in C# (List<T>, Dictionary<TKey,TValue>, HashSet<T>, Queue<T>, Stack<T>) provide type-safe methods for adding, removing, searching, and iterating over elements.
+* They also support LINQ extension methods for querying data.
+* Interfaces like IEnumerable<T> and ICollection<T> define common operations for all generic collections.
+
+### List:
+
+ | Method                      | Purpose                  |
+| --------------------------- | ------------------------ |
+| `Add(T item)`               | Adds an item             |
+| `AddRange(IEnumerable<T>)`  | Adds multiple items      |
+| `Insert(int index, T item)` | Inserts at position      |
+| `Remove(T item)`            | Removes first occurrence |
+| `RemoveAt(int index)`       | Removes by index         |
+| `Clear()`                   | Removes all items        |
+| `Contains(T item)`          | Checks if item exists    |
+| `IndexOf(T item)`           | Gets index               |
+| `Sort()`                    | Sorts list               |
+| `Reverse()`                 | Reverse order            |
+| `Find(Func<T, bool>)`       | Returns first match      |
+| `FindAll(Func<T, bool>)`    | Returns all matches      |
+| `Exists(Func<T, bool>)`     | Returns true/false       |
+| `ForEach(Action<T>)`        | Loop with action         |
+
+
+### Dictionary<TKey, TValue>:
+
+| Method                        | Purpose                |
+| ----------------------------- | ---------------------- |
+| `Add(key, value)`             | Adds key-value pair    |
+| `Remove(key)`                 | Removes by key         |
+| `ContainsKey(key)`            | Checks if key exists   |
+| `ContainsValue(value)`        | Checks if value exists |
+| `TryGetValue(key, out value)` | Safe get               |
+| `Clear()`                     | Remove all             |
+
+
+### Generic Collection Methods (HashSet<T>)
+
+ | Method               | Purpose                  |
+| -------------------- | ------------------------ |
+| `Add(item)`          | Adds unique item         |
+| `Remove(item)`       | Remove item              |
+| `Contains(item)`     | Check existence          |
+| `UnionWith(set)`     | Merge sets               |
+| `IntersectWith(set)` | Common elements          |
+| `ExceptWith(set)`    | Remove overlapping items |
+
+
+### Generic Collection Methods (Queue<T>)
+
+
+| Method          | Purpose           |
+| --------------- | ----------------- |
+| `Enqueue(item)` | Add to queue      |
+| `Dequeue()`     | Remove from front |
+| `Peek()`        | See first element |
+| `Clear()`       | Remove all        |
+
+
+
+### IEnumerable<T>
+
+GetEnumerator() → supports foreach
+
+### ICollection<T>
+
+| Method                         | Purpose       |
+| ------------------------------ | ------------- |
+| `Add`                          | Add item      |
+| `Remove`                       | Remove item   |
+| `Contains`                     | Exists check  |
+| `CopyTo(T[] array, int index)` | Copy elements |
+| `Count`                        | Total items   |
+
+
+### LINQ Extension Methods (Work on all Generic Collections)
+
+| Category       | Methods                                                    |
+| -------------- | ---------------------------------------------------------- |
+| Filtering      | `Where`, `First`, `FirstOrDefault`, `Single`, `Any`, `All` |
+| Projection     | `Select`, `SelectMany`                                     |
+| Sorting        | `OrderBy`, `OrderByDescending`                             |
+| Aggregation    | `Count`, `Sum`, `Min`, `Max`, `Average`                    |
+| Grouping       | `GroupBy`                                                  |
+| Joining        | `Join`, `GroupJoin`                                        |
+| Set Operations | `Distinct`, `Union`, `Intersect`, `Except`                 |
+| Conversion     | `ToList`, `ToArray`, `ToDictionary`                        |
+
+```csharp
+var result = users
+    .Where(u => u.IsActive)
+    .OrderBy(u => u.Name)
+    .ToList();
+```
+
+-------------------------------------------------------------
+
+### Difference between .NET Framework & .NET Core
 
 | .NET Framework     | .NET Core / .NET                              |
 | ------------------ | --------------------------------------------- |
