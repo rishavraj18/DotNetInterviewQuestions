@@ -23,6 +23,24 @@ Native Machine Code
 (x64 / ARM / Windows / Linux)
  ```
  -------------------------------------------------------------
+ ## Interface vs Abstract class
+
+| Feature                              | **Interface**                                       | **Abstract Class**                                        |
+| ------------------------------------ | --------------------------------------------------- | --------------------------------------------------------- |
+| Contains implementation?             | ❌ Before C# 8<br>✔ Default methods allowed in C# 8+ | ✔ Can contain full implementation                         |
+| Fields allowed?                      | ❌ No instance fields                                | ✔ Yes, fields allowed                                     |
+| Constructor?                         | ❌ Not allowed                                       | ✔ Allowed                                                 |
+| Access modifiers?                    | ❌ All members are public                            | ✔ Members can have any access modifier                    |
+| Multiple inheritance?                | ✔ Supports multiple interfaces                      | ❌ A class can inherit only one abstract class             |
+| Must implement all members?          | ✔ Yes (unless default interface methods)            | ❌ No, because abstract class can have concrete methods    |
+| When to use?                         | Define **contract/behavior**                        | Create **base class + shared logic**                      |
+| Supports constants?                  | ✔ Yes                                               | ✔ Yes                                                     |
+| Supports properties/events/indexers? | ✔ Yes                                               | ✔ Yes                                                     |
+| Can be instantiated?                 | ❌ No                                                | ❌ No                                                      |
+| Versioning                           | ❌ Harder                                            | ✔ Easier (because default implementations work naturally) |
+
+ -------------------------------------------------------------
+
  ## Abstract vs Virtual Method
 
  | Feature                | **Abstract Method**                          | **Virtual Method**                             |
