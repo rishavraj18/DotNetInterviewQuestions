@@ -23,6 +23,56 @@ Native Machine Code
 (x64 / ARM / Windows / Linux)
  ```
  -------------------------------------------------------------
+ ## Abstract vs Virtual Method
+
+ | Feature                | **Abstract Method**                          | **Virtual Method**                             |
+| ---------------------- | -------------------------------------------- | ---------------------------------------------- |
+| Has implementation?    | ❌ No                                         | ✅ Yes (default implementation)                 |
+| Must be overridden?    | ✅ Yes                                        | ❌ No (optional)                                |
+| Declared inside?       | Only in **abstract class**                   | In **regular** or **abstract class**           |
+| Purpose                | Force subclass to provide implementation     | Allow subclass to optionally override behavior |
+| Can instantiate class? | ❌ No (abstract class cannot be instantiated) | ✔ Yes (if class is not abstract)               |
+| Polymorphism?          | ✔ Yes                                        | ✔ Yes                                          |
+
+
+### Abstract Method
+
+ ```csharp
+public abstract class Shape
+{
+    public abstract double Area();  // No body → must override
+}
+
+
+public class Circle : Shape
+{
+    public double Radius { get; set; }
+    public override double Area() => Math.PI * Radius * Radius;
+}
+ ```
+
+ ### Virtual Method
+
+ ```csharp
+public class Animal
+{
+    public virtual void Speak()
+    {
+        Console.WriteLine("Animal makes a sound");
+    }
+}
+
+public class Dog : Animal
+{
+    public override void Speak()
+    {
+        Console.WriteLine("Dog barks");
+    }
+}
+ ```
+
+ -------------------------------------------------------------
+
  ## Generic collections
 
 * Generic collections in C# (List<T>, Dictionary<TKey,TValue>, HashSet<T>, Queue<T>, Stack<T>) provide type-safe methods for adding, removing, searching, and iterating over elements.
@@ -132,6 +182,36 @@ var result = users
 
 -------------------------------------------------------------
 
+## How Delegate is delared ?
+
+```csharp
+public delegate void MyDelegate(string msg);
+
+public class Demo
+{
+    public static void Print(string msg)
+    {
+        Console.WriteLine(msg);
+    }
+
+    public static void Main()
+    {
+        MyDelegate d = Print;   // method reference
+        d("Hello World");
+    }
+}
+```
+
+### Usage:
+
+* Asynchronous operation : Fund Transfer, Fetching Transaction History
+* Event Notifications : SMS, Email
+* 3rd Party Integration : UPI
+* Background processing : Interest Calculation, Settlements
+
+-------------------------------------------------------------
+
+
 ### Difference between .NET Framework & .NET Core
 
 | .NET Framework     | .NET Core / .NET                              |
@@ -174,7 +254,7 @@ ASP.NET Core handles requests through a pipeline of middleware components. Each 
 * It uses the ThreadPool efficiently, supports tasks, parallel loops (Parallel.For, Parallel.ForEach), and PLINQ.
 * TPL is the foundation of the async/await pattern and provides better performance, easier coding, and automatic thread management compared to manual threading.
 
-Key Features of TPL<br/>
+### Key Features of TPL<br/>
 1. Task-based programming model
 
 Instead of manually creating threads:
