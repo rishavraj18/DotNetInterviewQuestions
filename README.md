@@ -1,5 +1,28 @@
 # DotNetInterviewQuestions
 
+## C# → IL → Machine Code
+
+ ```csharp
+C# Code (.cs)
+     │
+     ▼
+Roslyn Compiler (csc.exe)
+     │
+     ▼
+IL + Metadata
+(.dll / .exe)
+     │
+     ▼
+CLR (Common Language Runtime)
+     │
+     ▼
+JIT Compilation
+     │
+     ▼
+Native Machine Code
+(x64 / ARM / Windows / Linux)
+ ```
+
 ## Difference between .NET Framework & .NET Core
 
 | .NET Framework     | .NET Core / .NET                              |
@@ -1332,6 +1355,19 @@ These cause deadlocks and block threads
 
 -------------------------------------------------------------
 
+## Task vs Thread vs async/await?
+
+| Feature    | Thread                  | Task                   | async/await                      |
+| ---------- | ----------------------- | ---------------------- | -------------------------------- |
+| Level      | Low-level               | High-level             | Language-level                   |
+| Type       | Physical OS thread      | Logical unit of work   | Syntax for async operations      |
+| Created by | Manually by developer   | CLR (.NET thread pool) | Compiler-managed                 |
+| Best for   | Long-running operations | CPU-bound work         | I/O-bound async                  |
+| Cost       | Expensive               | Cheaper                | Cheapest (no thread blocked)     |
+| Blocking   | Yes                     | Depends                | Never blocks thread during await |
+
+-------------------------------------------------------------
+
 ## Code First vs Database First
 
 * Code First: 
@@ -1758,27 +1794,111 @@ public class ProductService
 
 ## Lazy vs Eager vs Explicit loading?
 
-| Feature         | Eager Loading               | Lazy Loading                   | Explicit Loading         |
-| --------------- | --------------------------- | ------------------------------ | ------------------------ |
-| When data loads | Immediately with main query | When accessed                  | When manually triggered  |
-| Queries         | 1 big query                 | Many small queries             | Controlled extra queries |
-| Performance     | Good for predictable data   | Can be bad (N+1 problem)       | Good control / optimized |
-| Implementation  | `Include()`                 | Virtual navigation + proxies   | `.Load()`                |
-| Use case        | Need related data upfront   | Don’t always need related data | Precise control required |
+* Lazy Loading loads related data only when navigation properties are accessed, causing many small queries.
+* Eager Loading loads related data upfront using .Include(), usually in a single optimized query.
+* Explicit Loading loads related data on demand using Entry().Load(), giving full control without automatic queries.
+
+### Lazy Loading:
+
+Entities are loaded only when you access navigation properties. EF makes an automatic query behind the scenes when needed.
+
+```csharp
+var student = context.Students.First();
+
+var courses = student.Courses;   // **Lazy Loading** triggers a DB query here
+```
+
+### Eager Loading:
+
+Related data is loaded upfront, at the same time as the main entity. Use .Include() or .ThenInclude().
+
+```csharp
+var student = context.Students
+                     .Include(s => s.Courses)
+                     .First();
+```
+
+### Explicit Loading
+
+Manually load related data only when you want, using Entry(). Not automatic (like Lazy), not upfront (like Eager).
+
+```csharp
+var student = context.Students.First();
+
+// Later, load only if needed:
+context.Entry(student)
+       .Collection(s => s.Courses)
+       .Load();
+
+```
+
+
+| Feature               | Lazy Loading                     | Eager Loading       | Explicit Loading                      |
+| --------------------- | -------------------------------- | ------------------- | ------------------------------------- |
+| **When data loads?**  | Only when navigation accessed    | With main query     | When manually requested               |
+| **How?**              | EF generates query automatically | `.Include()`        | `context.Entry().Collection().Load()` |
+| **Number of queries** | Many (risk of N+1)               | Typically 1         | As many as you trigger                |
+| **Control**           | Low                              | Medium              | High                                  |
+| **Performance**       | Worst (hidden queries)           | Best                | Good                                  |
+| **Use Case**          | Very small apps                  | APIs, microservices | Complex scenarios                     |
+
 
 
 -------------------------------------------------------------
 
-## Task vs Thread vs async/await?
+## When should you use AsNoTracking()?
 
-| Feature    | Thread                  | Task                   | async/await                      |
-| ---------- | ----------------------- | ---------------------- | -------------------------------- |
-| Level      | Low-level               | High-level             | Language-level                   |
-| Type       | Physical OS thread      | Logical unit of work   | Syntax for async operations      |
-| Created by | Manually by developer   | CLR (.NET thread pool) | Compiler-managed                 |
-| Best for   | Long-running operations | CPU-bound work         | I/O-bound async                  |
-| Cost       | Expensive               | Cheaper                | Cheapest (no thread blocked)     |
-| Blocking   | Yes                     | Depends                | Never blocks thread during await |
+When EF Core fetches entities, by default it tracks them so it can detect changes and later save them using SaveChanges(). 
+AsNoTracking() is an Entity Framework Core query optimization method that tells EF Core NOT to track the returned entities in the DbContext's Change Tracker.
+
+Tracking adds overhead:
+* Memory (keeps copies of original values)
+* CPU (detects changes)
+* Change tracker overhead increases with large result sets
+
+```csharp
+var users = await _context.Users
+    .AsNoTracking()
+    .ToListAsync();
+```
+
+* Read-only queries (most common)
+* High-performance reporting / dashboards
+* When fetching referenced data but not modifying it
+* When loading large collections (millions of rows)
+
+-------------------------------------------------------------
+
+## How to use IDbContextTransaction?
+
+```csharp
+using var transaction = await _context.Database.BeginTransactionAsync();
+
+try
+{
+    var product = new Product { Name = "Laptop" };
+    _context.Products.Add(product);
+    await _context.SaveChangesAsync();
+
+    var order = new Order { ProductId = product.Id };
+    _context.Orders.Add(order);
+    await _context.SaveChangesAsync();
+
+    await transaction.CommitAsync();  // All good → commit
+}
+catch (Exception)
+{
+    await transaction.RollbackAsync(); // Something failed → rollback
+    throw;
+}
+```
+
+What happens?<br/>
+
+* If both SaveChanges succeed → transaction commits
+* If any SaveChanges fails → everything is rolled back
+* Database stays consistent
+
 
 -------------------------------------------------------------
 
@@ -1925,24 +2045,25 @@ Improves startup time.<br/>
 
 ## Caching strategies?
 
-What Is Caching?
+### What Is Caching?
 
-Caching is the technique of storing frequently accessed data in fast storage (memory, Redis, file) so future requests can access it quickly without recomputing or hitting the database.
+Caching is the technique of storing frequently accessed data in fast storage (memory, Redis, file) so future requests can access it quickly without recomputing or hitting the database.<br/>
 
-🧩 Types of Caching Strategies
-1️⃣ In-Memory Cache (IMemoryCache)
+🧩 Types of Caching Strategies: <br/>
 
-Stored in application memory, fastest cache.
+#### 1️) In-Memory Cache (IMemoryCache)<br/>
 
-✔ Best for:
+Stored in application memory, fastest cache.<br/>
 
-Single server deployments
+✔ Best for:<br/>
 
-Small data (< few MBs)
+* Single server deployments
+* Small data (< few MBs)
+* Frequently accessed, rarely changed data
 
-Frequently accessed, rarely changed data
+Example:<br/>
 
-Example:
+```csharp
 services.AddMemoryCache();
 
 public class ProductService
@@ -1963,70 +2084,71 @@ public class ProductService
         });
     }
 }
+```
 
-2️⃣ Distributed Cache (Redis / SQL Server Cache)
+#### 2️) Distributed Cache (Redis / SQL Server Cache)<br/>
 
-Stored outside the application, in Redis or SQL.
+Stored outside the application, in Redis or SQL.<br/>
 
-✔ Best for:
+✔ Best for:<br/>
 
-Load-balanced / multi-server applications
+* Load-balanced / multi-server applications
+* Microservices
+* Large caching needs
 
-Microservices
+Example:<br/>
 
-Large caching needs
-
-Example:
+```csharp
 services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = "localhost:6379";
 });
+```
 
-3️⃣ Response Caching
+#### 3️) Response Caching<br/>
 
-Caches entire HTTP responses.
+Caches entire HTTP responses.<br/>
 
 ✔ Best for:
 
-GET endpoints returning static or semi-static data
+* GET endpoints returning static or semi-static data
+* Public APIs with largely identical responses
 
-Public APIs with largely identical responses
-
+```csharp
 app.UseResponseCaching();
 
 [ResponseCache(Duration = 60)]
 public IActionResult Get() => Ok();
+```
 
-4️⃣ Output Caching (New in .NET 8)
+#### 4️) Output Caching (New in .NET 8)<br/>
 
-More powerful than response caching:
+* More powerful than response caching:
+* Can cache POST responses
+* Supports tags, vary-by, invalidation
 
-Can cache POST responses
-
-Supports tags, vary-by, invalidation
-
+```csharp
 builder.Services.AddOutputCache();
 
 app.MapGet("/products", () => data).CacheOutput();
+```
 
-5️⃣ Client-Side Caching
+#### 5️) Client-Side Caching<br/>
 
-Use browser cache headers.
+Use browser cache headers.<br/>
 
-Examples:
+Examples:<br/>
 
-Cache-Control
-
-ETag
-
-Last-Modified
+* Cache-Control
+* ETag
+* Last-Modified
 
 ✔ Best for:
 
-Static files
+* Static files
+* Images, CSS, JS
 
-Images, CSS, JS
-
+```csharp
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>
@@ -2034,92 +2156,116 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=86400";
     }
 });
+```
 
-6️⃣ Distributed Memory Caching (Hybrid)
+#### 6️) Distributed Memory Caching (Hybrid)<br/>
 
-Combination of in-memory + Redis, where local memory is used for fast reads, Redis for consistency.
+Combination of in-memory + Redis, where local memory is used for fast reads, Redis for consistency.<br/>
 
-7️⃣ Query Caching (EF Core)
+#### 7️) Query Caching (EF Core)<br/>
 
-Cache repeated database calls manually like:
+Cache repeated database calls manually like:<br/>
 
+```csharp
 var users = await _cache.GetOrCreateAsync("users_all", async e =>
 {
     e.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
     return await context.Users.AsNoTracking().ToListAsync();
 });
+```
 
-🧠 Caching Patterns (Strategies)
-🔥 A. Absolute Expiration
+### Caching Patterns (Strategies)
+#### A. Absolute Expiration
 
-Cache expires after fixed duration.
+Cache expires after fixed duration.<br/>
 
+```csharp
 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+```
 
+✔ Predictable<br/>
+✘ Might serve stale data<br/>
 
-✔ Predictable
-✘ Might serve stale data
+#### B. Sliding Expiration
 
-🔥 B. Sliding Expiration
+Resets expiration time each time the cache is accessed.<br/>
 
-Resets expiration time each time the cache is accessed.
-
+```csharp
 entry.SlidingExpiration = TimeSpan.FromMinutes(5);
+```
+
+✔ Great for frequently accessed but rarely updated data<br/>
+✘ Cache may stay forever if constantly used<br/>
+
+#### C. Cache Aside (Lazy Loading)
+
+Most common pattern.<br/>
+
+Check cache<br/>
+
+If not found → load from DB<br/>
+
+Put data into cache<br/>
+
+Return<br/>
+
+* Simple
+* Efficient
+* Works for most apps
+
+#### D. Write-Through Cache
+
+When data is written to DB, it's also written to cache immediately.<br/>
+
+✔ Cache always consistent<br/>
+✘ Slight write performance hit<br/>
+
+#### E. Write-Behind Cache
+
+Write to cache → DB updated later in background.<br/>
+
+✔ Super fast writes<br/>
+✘ Risk of data inconsistency<br/>
+
+#### F. Read-Through Cache
+
+Application always reads through the cache provider, which loads from DB automatically.<br/>
+
+✔ Encapsulated, clean<br/>
+✘ Provider complexity<br/>
+
+#### G. Cache Invalidation Strategies
+
+The hardest part of caching.<br/>
+
+Techniques:<br/>
+* Time-based expiration
+* Manual invalidation via key
+* Tag-based invalidation (Output Cache / Redis)
+* Event-based invalidation (e.g., on DB change)
 
 
-✔ Great for frequently accessed but rarely updated data
-✘ Cache may stay forever if constantly used
+#### Types
+* In-memory cache: very fast, single-instance.
+* Distributed cache (Redis, Memcached): shared across instances and durable for scaling.
 
-🔥 C. Cache Aside (Lazy Loading)
+#### Patterns
+* Cache-aside (application handles cache): common — read from cache, fallback to DB then set cache.
+* Read-through/write-through: cache handles reading/writing (requires specialized cache).
+* Prevent cache stampede: use locks, jitter, randomized TTLs, or request coalescing.
 
-Most common pattern.
+#### Eviction & TTL
+* Use sliding vs absolute expiration wisely. Keep caches small and invalidate on writes if necessary.
 
-Check cache
+```csharp
+var key = $"product:{id}";
+var cached = await _cache.GetStringAsync(key);
+if (cached != null) return JsonConvert.DeserializeObject<Product>(cached);
+var product = await _repo.Get(id);
+await _cache.SetStringAsync(key, JsonConvert.SerializeObject(product), new DistributedCacheEntryOptions{ AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) });
+return product;
+```
 
-If not found → load from DB
-
-Put data into cache
-
-Return
-
-✔ Simple
-✔ Efficient
-✔ Works for most apps
-
-🔥 D. Write-Through Cache
-
-When data is written to DB, it's also written to cache immediately.
-
-✔ Cache always consistent
-✘ Slight write performance hit
-
-🔥 E. Write-Behind Cache
-
-Write to cache → DB updated later in background.
-
-✔ Super fast writes
-✘ Risk of data inconsistency
-
-🔥 F. Read-Through Cache
-
-Application always reads through the cache provider, which loads from DB automatically.
-
-✔ Encapsulated, clean
-✘ Provider complexity
-
-🔥 G. Cache Invalidation Strategies
-
-The hardest part of caching.
-
-Techniques:
-
-Time-based expiration
-
-Manual invalidation via key
-
-Tag-based invalidation (Output Cache / Redis)
-
-Event-based invalidation (e.g., on DB change)
 
 -------------------------------------------------------------
 
@@ -2275,3 +2421,637 @@ Read Performance	Slower (more joins)	Faster
 Write Performance	Faster	Slower
 Use Cases	OLTP	OLAP / Reporting
 Complexity	More tables	Fewer tables
+
+-------------------------------------------------------------
+# MicroServices:
+
+## What is bounded context?
+
+A Bounded Context is one of the most important concepts in Domain-Driven Design (DDD).
+It defines a clear boundary in your system within which a particular domain model is valid.
+
+-------------------------------------------------------------
+
+## Why Do We Need Bounded Contexts?
+
+Because large applications become messy if you try to force one big model everywhere.
+Different parts of your business may use the same word but mean different things.
+
+-------------------------------------------------------------
+
+## Real Example: E-commerce System
+
+You would split into multiple bounded contexts:
+
+
+| Bounded Context | What it Contains                    |
+| --------------- | ----------------------------------- |
+| **Ordering**    | Cart, Order, OrderItem, Order Rules |
+| **Inventory**   | Stock, Warehouse, Quantity rules    |
+| **Payment**     | Payment, Invoice, Payment Rules     |
+| **Shipping**    | Shipment, Tracking, Delivery Rules  |
+| **Catalog**     | Products, Categories, Attributes    |
+
+
+Each context has: </br>
+
+* Different models
+* Different logic
+* Different teams
+* Often different databases
+* Clear boundaries
+
+-------------------------------------------------------------
+
+## How Contexts Interact — Context Mapping
+
+Bounded contexts communicate via:
+
+* Domain events
+* API calls
+* Message brokers (RabbitMQ, Kafka)
+* Anti-corruption layer
+
+Each context protects its internal models from being polluted by others.
+
+Example in Microservices
+
+Each microservice typically = 1 bounded context.
+
+* Ordering Service
+* Inventory Service
+* Payment Service
+* Shipping Service
+
+Each one owns its data.
+
+-------------------------------------------------------------
+
+## How to design a microservice communication system?
+
+### 1) Start with the goals & constraints</br>
+
+* Always begin by answering:
+* Latency requirements (sub-second v/s minutes)
+* Consistency model (strong v/s eventual)
+* Throughput and scale targets
+* Fault tolerance / availability SLAs
+* Team boundaries (who owns what)
+* Operational constraints (Kubernetes? Cloud? On-prem?)
+
+### 2) Two fundamental communication styles</br>
+
+#### A. Synchronous (request/response)</br>
+ 
+* Protocols: HTTP/REST, gRPC
+* Use when: caller needs immediate result (auth, lookup, simple CRUD).
+* Pros: simple, easy debugging, straightforward semantics.
+* Cons: tight coupling, cascading failures, higher latency under load.
+
+#### B. Asynchronous (message/event-driven)</br>
+
+* Protocols: message brokers (Kafka, RabbitMQ, AWS SNS/SQS), streaming.
+* Use when: eventual consistency is acceptable; decoupling, resilience, high throughput.
+* Pros: loose coupling, buffering, retries, scale.
+* Cons: complexity, eventual consistency, more operational overhead.
+
+### 3) Patterns & architectures</br>
+
+
+#### A. API Gateway + Edge</br>
+
+* Single entry for clients: authentication, TLS termination, rate limiting, routing, versioning.
+* Offloads cross-cutting concerns from services.
+
+#### B. Service Discovery & Load Balancing</br>
+
+* Static endpoints, or dynamic (Consul, Kubernetes DNS, AWS ALB).
+* Client-side (gRPC + client LB) or server-side (gateway/load balancer).
+
+### C. Choreography vs Orchestration</br>
+
+* Choreography: services emit events; others react. Simple, loosely coupled.
+* Orchestration: a central orchestrator (workflow engine, saga coordinator) drives steps. Easier for complex long-running processes.
+
+### D. Saga Pattern for distributed transactions</br>
+
+* Sequence of local transactions + compensating actions.
+
+Two implementations:</br>
+
+* Choreography: services publish/subscribe events.
+* Orchestration: saga orchestrator issues commands and handles failures.
+
+### E. Command Query Responsibility Segregation (CQRS)</br>
+
+* Separate read & write models. Combine with event sourcing if needed.
+
+### 4) Reliable messaging & delivery semantics
+
+* At-most-once: simple, may lose messages.
+* At-least-once: common (Kafka, RabbitMQ). Requires idempotency & deduplication.
+* Exactly-once: hard; some systems provide transactional guarantees (Kafka transactions, some cloud services).
+
+### 5) Failure handling & resilience
+
+* Retries: exponential backoff + jitter.
+* Circuit Breaker: avoid cascading failures (Polly for .NET).
+* Bulkhead isolation: separate resources per service.
+* Timeouts: short, explicit.
+* Backpressure: broker-based buffering, rate limits.
+* Health checks: readiness vs liveness.
+
+### 6) Observability & tracing
+
+* Correlation/Trace ID: pass a request id through HTTP headers and messages (X-Request-Id, traceparent).
+* Distributed tracing: OpenTelemetry, Jaeger, Zipkin.
+* Centralized logging: structured logs → ELK/EFK/Seq.
+* Metrics & Alerts: Prometheus + Grafana, latency & error SLOs.
+* Audit / events: persistent event store for important business events.
+
+### 7) Security
+
+* Authentication & Authorization: OAuth2 / OpenID Connect at gateway or per-service.
+* mTLS or network policy inside cluster.
+* Encrypt data in transit (TLS).
+* Service-to-service auth: JWT or short-lived mTLS certs.
+* Secrets management: Vault, Kubernetes Secrets, AWS Secrets Manager.
+
+### 8) Data consistency & ownership
+
+* Database-per-service (recommended) to avoid coupling.
+* Use eventual consistency when cross-service data must be synchronized.
+* Use CDC (Change Data Capture) + event streaming for syncing data into other services/analytics.
+* Use anti-corruption layer when integrating legacy systems.
+
+### 9) Example: Order processing (concrete flow)
+
+Two flavors — Choreography (event-driven) and Orchestration.
+
+#### Choreography (event-driven)
+
+* Client POST /orders → Order service creates Order (state: Created) and emits OrderCreated event to Kafka.
+* Payment service consumes OrderCreated, attempts payment → emits PaymentSucceeded or PaymentFailed.
+* Inventory service consumes PaymentSucceeded, reserves stock → emits InventoryReserved or InventoryFailed.
+* Shipping consumes InventoryReserved → schedules shipment → emits ShipmentScheduled.
+* Order service listens and updates order state as events arrive.
+
+Pros: highly decoupled; good scaling.</br>
+Cons: reasoning about global state is distributed; need idempotency, retries, and eventual consistency.</br>
+
+#### Orchestration (saga coordinator)
+
+* Order service calls Saga Orchestrator to start saga.
+* Orchestrator commands Payment, waits response, then commands Inventory, etc.
+* On failure, orchestrator triggers compensating actions (refund, restock).
+
+Pros: easier to follow the flow & implement compensations.</br>
+
+### 10) Concrete tech stack suggestions
+
+* Transport: HTTP/REST + gRPC (internal), Kafka or RabbitMQ for async.
+* Gateway: Kong / Nginx / Envoy / Ocelot / AWS API Gateway.
+* Service Discovery: Kubernetes DNS / Consul.
+* Circuit Breaker & Retry: Polly (.NET) or client libraries.
+* Tracing: OpenTelemetry, Jaeger.
+* Logging: Serilog → Elasticsearch / Seq.
+* Message schema: Protobuf (gRPC) or Avro with Schema Registry (Kafka).
+* Orchestrator: Temporal / MassTransit saga / custom coordinator.
+* Deployment: Kubernetes (Helm), containers.
+
+### 11) Practical implementation checklist
+
+* API Gateway for clients
+* Well-defined service APIs (OpenAPI)
+* Use TLS everywhere
+* Service discovery & load balancing
+* Choose message broker + schema registry
+* Implement idempotency keys for command endpoints / message handlers
+* Add correlation IDs for tracing
+* Retries with exponential backoff + jitter
+* Dead-letter queue + visibility/alerting
+* Circuit breakers and bulkheads
+* Monitoring: distributed traces, metrics, dashboards, alerts
+* Contract/versioning policy (both sync & async)
+* Security: OAuth2, mTLS, secrets manager
+* Test harness: integration tests with test broker, chaos testing
+
+### 11) Short code sketches (pseudo / .NET oriented)
+
+#### Produce an event after creating an order:
+
+```csharp
+// create order within EF transaction
+await _dbContext.Orders.AddAsync(order);
+await _dbContext.SaveChangesAsync();
+
+// publish event (ensure publish is retried or stored in outbox)
+await _messageBus.PublishAsync(new OrderCreated { OrderId = order.Id, Total = order.Total });
+```
+
+#### Idempotent handler:
+
+```csharp
+public async Task Handle(PaymentSucceeded evt)
+{
+    if (await _processedEventStore.ExistsAsync(evt.EventId)) return; // dedupe
+    await _processedEventStore.MarkProcessedAsync(evt.EventId);
+
+    var order = await _orderRepo.Get(evt.OrderId);
+    order.MarkPaid();
+    await _orderRepo.Update(order);
+}
+```
+
+#### Using outbox pattern (recommended):
+
+* Write domain changes + outgoing events to DB in same transaction.
+* A separate process reads outbox table and publishes to broker, marking them sent.
+
+#### Common pitfalls & anti-patterns
+
+* Synchronous calls across many services in a single user request → high latency & brittle.
+* Not designing for idempotency → duplicate side effects.
+* Tight coupling on database schemas between services.
+* No schema management → breaking consumers on change.
+* No observability → hard to debug distributed failures.
+* No DLQ or retries → lost/poison messages.
+
+-------------------------------------------------------------
+
+## What is an API Gateway?
+
+In a microservices architecture, an API Gateway is a single entry point for all client requests. Instead of clients calling each microservice directly, all requests go through the gateway.</br>
+
+Why?</br>
+
+Because microservices architecture has:</br>
+
+* Many services
+* Many URLs
+* Different protocols
+* Different authentication mechanisms
+
+Key Responsibilities of an API Gateway</br>
+
+1. Request Routing
+* Gateway → forwards request to correct microservice.
+
+2. Aggregation / Composition</br>
+* Combines data from multiple microservices into a single response.
+
+3. Authentication & Authorization</br>
+* Validates JWT tokens
+* Integrates with Identity Server / Azure AD / OAuth
+
+4. Rate Limiting / Throttling</br>
+* Prevents abuse or overload.
+
+5. Logging & Monitoring</br>
+* Centralizes logs
+* Adds correlation IDs
+
+6. Caching</br>
+* Stores responses to reduce load on backend services.
+
+7. Load Balancing</br>
+* Sends requests to available instances.
+
+-------------------------------------------------------------
+
+## When to Use an API Gateway?
+
+Use when:</br>
+* You have many microservices
+* You want a single public endpoint
+* You need centralized auth/logging/routing
+
+Avoid when:</br>
+* You have a small monolithic app
+* Internal microservices don't face external users
+
+-------------------------------------------------------------
+
+## Ocelot vs YARP
+
+| Feature       | **Ocelot**      | **YARP**                |
+| ------------- | --------------- | ----------------------- |
+| Developer     | Community       | Microsoft               |
+| Config        | JSON file       | JSON or code            |
+| Customization | Medium          | Very high               |
+| Performance   | Good            | Excellent               |
+| Use Case      | Simple gateways | High-perf reverse proxy |
+
+-------------------------------------------------------------
+
+## Banking Application – Microservices
+
+#### A typical banking architecture will have services like:
+
+* AuthService – login, token issue
+* CustomerService – profile, KYC
+* AccountService – balance, statements
+* TransactionService – transfer, payments
+* CardService – debit/credit card operations
+* NotificationService – email/SMS
+* LoanService – loan details, EMI, eligibility
+
+
+#### Each one runs on its own container/port:
+
+| Service      | URL                                                          |
+| ------------ | ------------------------------------------------------------ |
+| Auth         | [http://auth-service:5001](http://auth-service:5001)         |
+| Customer     | [http://customer-service:5002](http://customer-service:5002) |
+| Accounts     | [http://account-service:5003](http://account-service:5003)   |
+| Transactions | [http://txn-service:5004](http://txn-service:5004)           |
+| Cards        | [http://card-service:5005](http://card-service:5005)         |
+| Loans        | [http://loan-service:5006](http://loan-service:5006)         |
+
+#### Goal of the API Gateway
+
+A gateway will:
+
+#### Provide single public entry point:
+👉 https://bank.myapp.com/api
+
+Handle:</br>
+✔ JWT Validation</br>
+✔ Rate limiting (prevent brute-force)</br>
+✔ Logging + correlation ID</br>
+✔ Routing to microservices</br>
+✔ Response aggregation (e.g., "dashboard" API)</br>
+✔ CORS/HTTPS</br>
+✔ Request/Response transformation</br>
+
+#### Ocelot Gateway – Route Design
+
+| Gateway Route      | Downstream Microservice |
+| ------------------ | ----------------------- |
+| `/auth/**`         | AuthService             |
+| `/customers/**`    | CustomerService         |
+| `/accounts/**`     | AccountService          |
+| `/transactions/**` | TransactionService      |
+| `/cards/**`        | CardService             |
+| `/loans/**`        | LoanService             |
+
+
+#### ocelot.json – Banking API Gateway
+
+```csharp
+{
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/auth/{everything}",
+      "DownstreamHostAndPorts": [
+        { "Host": "auth-service", "Port": 5001 }
+      ],
+      "UpstreamPathTemplate": "/auth/{everything}",
+      "UpstreamHttpMethod": [ "POST", "GET" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "JwtBearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/customers/{everything}",
+      "DownstreamHostAndPorts": [
+        { "Host": "customer-service", "Port": 5002 }
+      ],
+      "UpstreamPathTemplate": "/customers/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "JwtBearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/{everything}",
+      "DownstreamHostAndPorts": [
+        { "Host": "account-service", "Port": 5003 }
+      ],
+      "UpstreamPathTemplate": "/accounts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "JwtBearer"
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/transactions/{everything}",
+      "DownstreamHostAndPorts": [
+        { "Host": "txn-service", "Port": 5004 }
+      ],
+      "UpstreamPathTemplate": "/transactions/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "JwtBearer"
+      }
+    }
+  ],
+
+  "GlobalConfiguration": {
+    "BaseUrl": "https://bank.myapp.com/api"
+  }
+}
+```
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddAuthentication("JwtBearer")
+    .AddJwtBearer("JwtBearer", options =>
+    {
+        options.Authority = "https://auth.mybank.com";
+        options.Audience = "banking-api";
+    });
+
+builder.Services.AddOcelot();
+
+builder.Logging.AddSerilog();
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+await app.UseOcelot();
+app.Run();
+```
+
+#### Security inside the Gateway:
+
+1) JWT Validation
+
+* Authenticates every request from Mobile/Web App.
+
+2️) Rate Limiting
+
+* Prevent brute-force or DDoS.
+
+3️) API Key for internal microservices
+
+* Service-to-service communication uses headers
+
+4) Correlation ID
+
+* Used for tracing in ELK.
+
+
+#### How Client Calls Gateway
+
+Instead of calling direct services:</br>
+
+❌ https://account-service:5003/api/accounts/123 </br>
+
+Client calls:</br>
+
+✔ https://bank.myapp.com/api/accounts/123 </br>
+
+Gateway → routes → account-service.
+
+-------------------------------------------------------------
+
+## How to handle Distributed transactions in microservice app ?
+
+Distributed transactions are one of the hardest problems in microservices because each service has its own database, transactions, and autonomy.</br>
+Traditional DB transactions (ACID) cannot work across multiple services.</br>
+
+So in microservices, we handle distributed transactions using patterns and event-driven architecture, not 2-phase commit.</br>
+
+* Microservices cannot use ACID transactions across services.
+* Instead, we use Saga patterns (choreography/orchestration), Outbox pattern, and event-driven architecture to maintain consistency.
+* Compensating actions are used instead of rollback.
+* This ensures availability, reliability, and eventual consistency.
+
+#### Why we can’t use ACID (2PC) in microservices?</br>
+
+* Microservices use independent databases
+* Services run in containers → dynamic, ephemeral
+* 2PC (two-phase commit) is slow and blocks resources
+* Breaks service autonomy
+* Causes cascading failures
+
+### 1) Saga Pattern (Most widely used)
+
+A Saga splits a large transaction into a series of local transactions, each done by a different service, coordinated by events.
+
+#### A. Choreography Saga (Event-based Saga)
+
+No central coordinator.</br>
+Services listen to events and publish next events.</br>
+
+Example: Bank Money Transfer (Debit → Credit)</br>
+
+TransactionService publishes:</br>
+MoneyTransferRequested</br>
+
+AccountService listens → Debit account</br>
+Publishes AccountDebited</br>
+
+NotificationService listens → Send SMS</br>
+Publishes MoneyTransferCompleted</br>
+
+When to use:
+
+* Simple workflows
+* Very high performance
+* No complex branching
+
+#### B. Orchestration Saga (Central Coordinator)
+
+A Saga Orchestrator instructs services what to do.</br>
+
+Example Flow:</br>
+
+Orchestrator → tells AccountService: “debit the amount”</br>
+AccountService returns success</br>
+Orchestrator → tells TransactionService: “record transaction”</br>
+Orchestrator → tells NotificationService: “send confirmation”</br>
+
+When to use:</br>
+
+* Complex workflows
+* Compensation logic
+* Multiple steps or branching
+
+### 2) Eventual Consistency
+
+Services update their own DB locally.</br>
+Other services adjust later when they receive events.</br>
+
+Used by:</br>
+* Amazon
+* Uber
+* Netflix
+
+### 3) TCC (Try Confirm Cancel)
+
+Used for payment gateways, booking systems.</br>
+
+Steps:</br>
+
+* Try → Reserve resources (e.g., freeze payment amount)
+* Confirm → Complete transaction
+* Cancel → Rollback reservation
+
+
+#### Tools used in Distributed Transactions
+
+| Purpose             | Tools                                                |
+| ------------------- | ---------------------------------------------------- |
+| Message Broker      | RabbitMQ, Kafka, Azure Service Bus                   |
+| Saga Orchestrator   | MassTransit, NServiceBus, Dapr Workflow, Temporal.io |
+| Outbox              | EF Core Outbox, MassTransit Outbox                   |
+| Distributed Tracing | OpenTelemetry, Jaeger, Zipkin                        |
+| Idempotency         | Redis, DB locks                                      |
+
+-------------------------------------------------------------
+
+## Azure knowledge
+
+App Service vs Function vs Container</br>
+
+App Service: managed web hosting for web apps/APIs.</br>
+
+Function App: serverless, event-driven, good for small tasks and pay-per-execution.</br>
+
+Container Apps/AKS: container orchestrations for microservices with custom dependencies.</br>
+
+Scaling</br>
+
+Horizontal scale: add instances; Azure Load Balancer or front door distributes traffic.</br>
+
+Vertical scaling: increase VM size; typically limited.</br>
+
+Azure SQL vs Cosmos DB</br>
+
+Azure SQL: relational workloads, strong ACID, SQL queries.</br>
+
+Cosmos DB: globally-distributed, multi-model, low-latency, tunable consistency.</br>
+
+Load Balancer</br>
+
+Routes inbound packets to back-end VMs/instances; works at layer 4. For HTTP routing layer 7 use Application Gateway or Azure Front Door.</br>
+
+-------------------------------------------------------------
+
+## Performance tuning
+
+Common levers</br>
+
+Reduce allocations; prefer Span<T> where appropriate.</br>
+
+Use AsNoTracking() on read-only EF queries.</br>
+
+Avoid boxing and excessive LINQ that hides allocations.</br>
+
+Cache expensive computations.</br>
+
+Profiling tools</br>
+
+dotnet-counters, dotnet-trace, PerfView, Visual Studio Profiler, and third-party profilers (JetBrains dotTrace).</br>
+
+GC basics</br>
+
+Generations: Gen0 (short-lived), Gen1, Gen2 (long-lived). Large Object Heap (LOH) stores >85K arrays/objects. Frequent Gen2/LOH collections indicate memory pressure.
