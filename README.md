@@ -167,6 +167,116 @@ ASP.NET Core handles requests through a pipeline of middleware components. Each 
 * Use IHostedService for lifecycle control; BackgroundService for polling jobs, timed tasks, etc. Be careful with shutting down gracefully (honor CancellationToken).
 
 -------------------------------------------------------------
+## What is Task Parallel Library (TPL) ?
+
+* It is part of the System.Threading.Tasks namespace.
+* The Task Parallel Library (TPL) is a set of APIs in .NET that simplifies writing asynchronous and parallel code.
+* It uses the ThreadPool efficiently, supports tasks, parallel loops (Parallel.For, Parallel.ForEach), and PLINQ.
+* TPL is the foundation of the async/await pattern and provides better performance, easier coding, and automatic thread management compared to manual threading.
+
+Key Features of TPL<br/>
+1. Task-based programming model
+
+Instead of manually creating threads:
+
+```csharp
+var task = Task.Run(() => DoWork());
+```
+
+2. Automatic thread-pool usage<br/>
+
+* You don’t manage threads.
+* TPL uses the ThreadPool efficiently.
+
+3. Parallel execution<br/>
+
+* Works across all CPU cores:
+
+```csharp
+Parallel.For(0, 10, i =>
+{
+    Console.WriteLine(i);
+});
+```
+
+4. Supports async/await<br/>
+
+* TPL is the core of async/await in C#.
+
+```csharp
+await Task.Delay(1000);
+```
+
+5. Continuations<br/>
+
+* Execute something after a task completes:
+
+```csharp
+task.ContinueWith(t => Console.WriteLine("Task finished"));
+```
+
+6. Aggregates exceptions cleanly<br/>
+
+* Multiple exceptions → wrapped into AggregateException.
+
+### TPL Components
+
+1. Task<br/>
+
+* A representation of an asynchronous operation.
+
+2. Parallel class<br/>
+
+Used for parallel loops:<br/>
+
+* Parallel.Invoke
+* Parallel.For
+* Parallel.ForEach
+
+3. PLINQ (Parallel LINQ)<br/>
+
+Speeds up LINQ using multiple processors.<br/>
+
+```csharp
+var result = numbers.AsParallel().Where(n => n % 2 == 0).ToList();
+```
+
+4. TaskScheduler<br/>
+
+Controls how tasks are scheduled.<br/>
+
+### Example: Simple TPL Task
+
+```csharp
+Task task = Task.Run(() =>
+{
+    Console.WriteLine("Running on a background task");
+});
+
+task.Wait();
+```
+
+### Example: Parallel.For
+
+```csharp
+Parallel.For(0, 5, i =>
+{
+    Console.WriteLine($"Processing {i}");
+});
+```
+
+### Uses multiple CPU cores automatically.
+
+### Example: Async/Await Uses TPL Under the Hood
+
+```csharp
+public async Task FetchDataAsync()
+{
+    await Task.Delay(1000); // Uses TPL internally
+}
+```
+
+-------------------------------------------------------------
 
 ## Explain Hosting vs background services in ASP.NET Core ?
 
