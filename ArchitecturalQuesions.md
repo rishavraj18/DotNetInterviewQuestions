@@ -43,7 +43,7 @@ e.g. Cloudflare, Akamai, Azure Front Door
 
 * Protects your application from Distributed Denial of Service attacks
 * Absorbs traffic at global edge locations, Blocks malicious IPs, bots, and traffic patterns before they reach our servers
-* Prevents your API Gateway, Load Balancer, and APIs from being overwhelmed
+* Prevents our API Gateway, Load Balancer, and APIs from being overwhelmed
 * Ensures high availability
 
 
@@ -57,15 +57,76 @@ e.g. Cloudflare, Akamai, Azure Front Door
 100 requests / minute / IP   // -> If exceeded → returns 429 Too Many Requests
 ```
 
+#### TLS termination:
+
+```csharp
+Client  →  HTTPS  →  CDN (TLS ends here)
+CDN     →  HTTP/HTTPS → Backend API
+```
+
+* HTTPS (TLS) encryption is ended at the CDN or Load Balancer
+* Benefits : Offloads CPU-intensive encryption from ASP.NET Core servers, Centralized certificate management, Faster request handling
+* Cloudflare handles HTTPS, Internal traffic may use mTLS(Mutual Transport Layer Security) or private network HTTP
+
+```csharp
+Clients (Browser/Mobile)
+   |
+   | HTTPS
+   |
+CDN (Cloudflare)
+   |  ← TLS termination here
+   |
+API Gateway / Load Balancer
+   |  ← mTLS starts here
+   |
+ASP.NET Core APIs
+   |
+Backend Services (DB, Cache, MQ)
+```
+
+#### Edge caching:
+
+* Caches responses close to users at edge locations
+* Static assets (JS, CSS, images), Public GET API responses, Frequently requested data
+* Benefits: Lower latency, Reduced load on backend APIs, Faster response times globally
+
+#### WAF (Web Application Firewall):
+
+* Security layer that protects against application-level attacks
+* Blocks: SQL Injection, XSS, CSRF, Path traversal, Malicious payloads
+* Inspects HTTP requests and responses, Uses predefined and custom security rules
+
+-------------------------------------------------------------
+
+## mTLS:
+
+### TLS vs mTLS:
+
+| Feature              | TLS (HTTPS)     | mTLS                                 |
+| -------------------- | --------------- | ------------------------------------ |
+| Client authenticated | ❌ No            | ✅ Yes                                |
+| Server authenticated | ✅ Yes           | ✅ Yes                                |
+| Security level       | High            | **Very High**                        |
+| Typical use          | Public websites | **Service-to-service communication** |
 
 
+### How mTLS Works:
 
-TLS termination
+* Client sends request + its certificate
+* Server verifies client certificate against a trusted CA
+* Server sends its certificate
+* Client verifies server certificate
+* Encrypted, trusted communication begins 🔒
+* mTLS is NOT used for browsers
+* mTLS is used internally between services
 
+Both sides say:<br/>
+“I trust you, and you trust me.”<br/>
 
-Edge caching
+### mTLS usages:
 
-
-WAF (Web Application Firewall)
-
-  -------------------------------------------------------------
+Microservices communication
+API Gateway → Backend APIs
+Payment systems
+Banking / Healthcare systems
+Internal admin APIs
