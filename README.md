@@ -121,6 +121,126 @@ In simple words:<br/>
 This line starts your API server.<br/>
 
  -------------------------------------------------------------
+ ## How to secure Asp.Net core application: (****Add more***)
+
+ ###  Man-in-the-middle attacks (MITM) and downgrade attacks -> UseHsts();
+
+ Enable HTTP Strict Transport Security (HSTS).<br/>
+ All future attempts to access HTTP are automatically converted to HTTPS inside the browser, without hitting your server.
+ 
+ ###  Cross-Site Request Forgery (CSRF) 
+
+When a form is rendered:
+
+ASP.NET Core generates:
+
+A cookie token → stored in the browser
+A request token → stored in a hidden field inside the form
+
+```csharp
+<form method="post">
+    @Html.AntiForgeryToken()
+    <button type="submit">Submit</button>
+</form>
+```
+
+```csharp
+[ValidateAntiForgeryToken]
+public IActionResult Submit(MyModel model)
+{
+    // Your logic
+}
+```
+
+
+ -------------------------------------------------------------
+
+
+ ## Cloudflare
+
+1. Cloudflare = CDN + Security + Performance Layer
+
+Cloudflare provides:
+
+✅ 1. Content Delivery Network (CDN)
+
+Caches your static resources (images, CSS, JS, videos) on servers worldwide
+
+Makes websites load faster globally
+
+Reduces load on your web server
+
+✅ 2. DDoS Protection
+
+Protects your website/API from attacks that try to overload it.
+
+Cloudflare can block:
+
+DDoS attacks
+
+Bot traffic
+
+Malicious IPs
+
+Automated scraping
+
+✅ 3. WAF (Web Application Firewall)
+
+Stops:
+
+SQL Injection
+
+XSS
+
+CSRF
+
+OWASP Top 10 vulnerabilities
+
+Useful for ASP.NET Core APIs.
+
+✅ 4. DNS Management
+
+Cloudflare offers fast, globally distributed DNS.
+
+Very quick domain resolution
+
+Highly reliable (less downtime)
+
+✅ 5. SSL/TLS
+
+Gives free HTTPS certificates, with automatic renewal.
+
+Modes:
+
+Flexible SSL
+
+Full SSL
+
+Full (Strict)
+
+✅ 6. Reverse Proxy / Edge Network
+
+Cloudflare processes requests before they reach your server.
+
+Example:
+
+User → Cloudflare → Your Server
+
+
+This reduces:
+
+Server load
+
+Bandwidth usage
+
+Attack risk
+
+✅ 7. Caching for APIs (Edge Caching)
+
+Cloudflare Workers & Edge Cache can cache even API responses.
+
+
+ -------------------------------------------------------------
 
  ## Interface vs Abstract class
 
@@ -2414,6 +2534,17 @@ For multi-server deployments / microservices.<br/>
 🔹 Don’t cache large objects unnecessarily<br/>
 
 Avoid LOH (Large Object Heap) pressure.<br/>
+
+| Feature                        | **Response Caching**             | **Output Caching**      | **Distributed Caching**                |
+| ------------------------------ | -------------------------------- | ----------------------- | -------------------------------------- |
+| Where cached?                  | **Client** (Browser, CDN, Proxy) | **Server** (App memory) | **External cache store** (Redis/SQL)   |
+| What is cached?                | Full HTTP response               | Full HTTP response      | Raw data / objects (not full response) |
+| Who controls it?               | Browser/CDN via headers          | Server middleware       | Application code                       |
+| Cache survives server restart? | ✔ Yes                            | ❌ No                    | ✔ Yes                                  |
+| Works for authenticated users? | ❌ Generally no                   | ✔ Yes                   | ✔ Yes                                  |
+| Main benefit                   | Reduce network calls             | Boost throughput        | Share cache across servers             |
+| Introduced                     | Since .NET Core 1                | .NET 7+                 | Since .NET Core 1                      |
+
 
 ### 7) Memory Optimizations
 
