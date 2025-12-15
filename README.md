@@ -121,21 +121,26 @@ In simple words:<br/>
 This line starts your API server.<br/>
 
  -------------------------------------------------------------
- ## How to secure Asp.Net core application: (****Add more***)
+## How to secure Asp.Net core application: (****Add more***)
 
- ###  Man-in-the-middle attacks (MITM) and downgrade attacks -> UseHsts();
+### 1)  Man-in-the-middle attacks (MITM) and downgrade attacks -> UseHsts();
 
  Enable HTTP Strict Transport Security (HSTS).<br/>
  All future attempts to access HTTP are automatically converted to HTTPS inside the browser, without hitting your server.
  
- ###  Cross-Site Request Forgery (CSRF) 
+### 2) Cross-Site Request Forgery (CSRF) 
 
-When a form is rendered:
+Tricking a logged-in user to perform actions unknowingly<br/>
 
-ASP.NET Core generates:
+#### When a form is rendered:
 
-A cookie token → stored in the browser
-A request token → stored in a hidden field inside the form
+<br/>ASP.NET Core generates:
+
+* A cookie token → stored in the browser
+* A request token → stored in a hidden field inside the form
+* Example : User logged into bank, Visits malicious site, Hidden form submits transfer request
+* Impact : Unauthorized actions
+* Prevention : Anti-forgery tokens, SameSite cookies, Authorization checks, APIs usually use JWT instead of cookies, so CSRF risk is lower
 
 ```csharp
 <form method="post">
@@ -152,9 +157,534 @@ public IActionResult Submit(MyModel model)
 }
 ```
 
+### 3)  SQL Injection
 
- -------------------------------------------------------------
+* Attacker injects malicious SQL into input fields to manipulate the database e.g. ' OR 1=1 --
+* Impact: Data leakage, Authentication bypass, Data deletion
+* Prevention: Parameterized queries, ORM (EF Core), WAF SQL injection rules, Input validation, Never use string concatenation for SQL
 
+```csharp
+context.Users
+    .Where(u => u.Email == email); // Safe (parameterized)
+```
+
+*Stored procedure is dicussed below*
+
+### 4)  XSS (Cross-Site Scripting)
+
+Injecting malicious JavaScript into web pages
+Types : Stored XSS, Reflected XSS, DOM-based XSS
+Impact : Session hijacking, Cookie theft, Account takeover
+Prevention : Output encoding, Content Security Policy (CSP), WAF XSS filters
+
+e.g. Razor automatically HTML-encodes output
+
+
+### 5) Path Traversal
+
+* Accessing files outside intended directories
+* Impact : Sensitive file access, Config leakage
+* Prevention : Never accept raw file paths e.g NAS only with required service account
+* WAF path traversal rules
+
+```csharp
+
+CDN / WAF
+ ├─ Blocks SQLi, XSS, Path Traversal
+ ├─ Rate limits malicious payloads
+ ├─ Signature + behavioral rules
+ |
+ASP.NET Core
+ ├─ Validation
+ ├─ Authentication & Authorization
+ ├─ Secure coding practices
+ |
+Database
+ ├─ Least privilege
+ ├─ Read/write separation
+
+ ```
+
+-------------------------------------------------------------
+
+ ## Parameterized Stored Procedure
+
+* Step 1: SQL Server: Parameterized Stored Procedure*
+```sql
+CREATE PROCEDURE usp_GetUsersByStatus
+(
+    @IsActive BIT,
+    @MinAge INT
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT Id, Name, Email, Age, IsActive
+    FROM Users
+    WHERE IsActive = @IsActive
+      AND Age >= @MinAge;
+END
+```
+
+* Step 2: ASP.NET Core Model (DTO):*
+
+```csharp
+public class UserDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+    public int Age { get; set; }
+    public bool IsActive { get; set; }
+}
+```
+
+* Step 3: Repository Method (ADO.NET)*
+
+```csharp
+using System.Data;
+using System.Data.SqlClient;
+
+public class UserRepository
+{
+    private readonly IConfiguration _configuration;
+
+    public UserRepository(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    public async Task<List<UserDto>> GetUsersAsync(bool isActive, int minAge)
+    {
+        var users = new List<UserDto>();
+
+        using var connection = new SqlConnection(
+            _configuration.GetConnectionString("DefaultConnection"));
+
+        using var command = new SqlCommand("usp_GetUsersByStatus", connection);
+        command.CommandType = CommandType.StoredProcedure;
+
+        // Parameters
+        command.Parameters.AddWithValue("@IsActive", isActive);
+        command.Parameters.AddWithValue("@MinAge", minAge);
+
+        await connection.OpenAsync();
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            users.Add(new UserDto
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                Email = reader.GetString(2),
+                Age = reader.GetInt32(3),
+                IsActive = reader.GetBoolean(4)
+            });
+        }
+
+        return users;
+    }
+}
+```
+
+*Step 4: API Controller*
+
+```csharp
+[ApiController]
+[Route("api/users")]
+public class UsersController : ControllerBase
+{
+    private readonly UserRepository _repository;
+
+    public UsersController(UserRepository repository)
+    {
+        _repository = repository;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetUsers(
+        bool isActive,
+        int minAge)
+    {
+        var result = await _repository.GetUsersAsync(isActive, minAge);
+        return Ok(result);
+    }
+}
+```
+
+*Step 5: ADependency Injection (Program.cs)*
+
+builder.Services.AddScoped<UserRepository>();
+
+
+#### API Call Example:
+GET /api/users?isActive=true&minAge=18
+
+-------------------------------------------------------------
+
+## Stored Procedure with EF Core:
+
+### 1. SQL Server Stored Procedures
+
+#### SELECT Stored Procedure
+
+ ```sql
+ CREATE PROCEDURE usp_GetUsersByStatus
+(
+    @IsActive BIT,
+    @MinAge INT
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT Id, Name, Email, Age, IsActive
+    FROM Users
+    WHERE IsActive = @IsActive
+      AND Age >= @MinAge;
+END
+```
+
+#### INSERT Stored Procedure (with OUTPUT)
+
+ ```sql
+ CREATE PROCEDURE usp_CreateUser
+(
+    @Name NVARCHAR(100),
+    @Email NVARCHAR(100),
+    @Age INT,
+    @IsActive BIT,
+    @UserId INT OUTPUT
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO Users (Name, Email, Age, IsActive)
+    VALUES (@Name, @Email, @Age, @IsActive);
+
+    SET @UserId = SCOPE_IDENTITY();
+END
+ ```
+
+### 2. EF Core Entity
+
+```csharp
+public class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+    public int Age { get; set; }
+    public bool IsActive { get; set; }
+}
+```
+
+### 3. DbContext Configuration
+
+```csharp
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options) { }
+
+    public DbSet<User> Users { get; set; }
+}
+```
+
+
+### 4. SELECT Stored Procedure using EF Core
+
+**FromSqlRaw (Read-Only)**
+
+* FromSqlRaw() works only for SELECT
+* AsNoTracking() improves performance
+
+```csharp
+public async Task<List<User>> GetUsersAsync(bool isActive, int minAge)
+{
+    return await _context.Users
+        .FromSqlRaw(
+            "EXEC usp_GetUsersByStatus @IsActive, @MinAge",
+            new SqlParameter("@IsActive", isActive),
+            new SqlParameter("@MinAge", minAge))
+        .AsNoTracking()
+        .ToListAsync();
+}
+```
+
+### 5. INSERT Stored Procedure using EF Core:
+
+* EF Core does NOT support inserts via FromSql, so use ExecuteSqlRawAsync.
+* Missing parameters → Runtime error
+
+```csharp
+public async Task<int> CreateUserAsync(User user)
+{
+    var outputParam = new SqlParameter
+    {
+        ParameterName = "@UserId",
+        SqlDbType = SqlDbType.Int,
+        Direction = ParameterDirection.Output
+    };
+
+    await _context.Database.ExecuteSqlRawAsync(
+        "EXEC usp_CreateUser @Name, @Email, @Age, @IsActive, @UserId OUT",
+        new SqlParameter("@Name", user.Name),
+        new SqlParameter("@Email", user.Email),
+        new SqlParameter("@Age", user.Age),
+        new SqlParameter("@IsActive", user.IsActive),
+        outputParam
+    );
+
+    return (int)outputParam.Value;
+}
+```
+
+### 6. Repository Example:
+
+```csharp
+public class UserRepository
+{
+    private readonly AppDbContext _context;
+
+    public UserRepository(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public Task<List<User>> GetUsersAsync(bool isActive, int minAge)
+        => _context.Users
+            .FromSqlRaw(
+                "EXEC usp_GetUsersByStatus @IsActive, @MinAge",
+                new SqlParameter("@IsActive", isActive),
+                new SqlParameter("@MinAge", minAge))
+            .AsNoTracking()
+            .ToListAsync();
+
+    public Task<int> CreateUserAsync(User user)
+        => CreateUserInternalAsync(user);
+
+    private async Task<int> CreateUserInternalAsync(User user)
+    {
+        var idParam = new SqlParameter("@UserId", SqlDbType.Int)
+        {
+            Direction = ParameterDirection.Output
+        };
+
+        await _context.Database.ExecuteSqlRawAsync(
+            "EXEC usp_CreateUser @Name, @Email, @Age, @IsActive, @UserId OUT",
+            new SqlParameter("@Name", user.Name),
+            new SqlParameter("@Email", user.Email),
+            new SqlParameter("@Age", user.Age),
+            new SqlParameter("@IsActive", user.IsActive),
+            idParam
+        );
+
+        return (int)idParam.Value;
+    }
+}
+```
+
+### 7. API Controller:
+
+```csharp
+[ApiController]
+[Route("api/users")]
+public class UsersController : ControllerBase
+{
+    private readonly UserRepository _repository;
+
+    public UsersController(UserRepository repository)
+    {
+        _repository = repository;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Get(bool isActive, int minAge)
+    {
+        var users = await _repository.GetUsersAsync(isActive, minAge);
+        return Ok(users);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create(User user)
+    {
+        var userId = await _repository.CreateUserAsync(user);
+        return Ok(new { UserId = userId });
+    }
+}
+```
+
+### 8. Program.cs (EF Core Setup)
+
+```csharp
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<UserRepository>();
+```
+
+-------------------------------------------------------------
+
+## SQL Server Stored Procedure with OUTPUT Parameters:
+
+### Example: Insert User + Return ID and Status
+
+```sql
+CREATE PROCEDURE usp_CreateUser
+(
+    @Name NVARCHAR(100),
+    @Email NVARCHAR(100),
+    @Age INT,
+    @UserId INT OUTPUT,
+    @StatusMessage NVARCHAR(100) OUTPUT
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM Users WHERE Email = @Email)
+    BEGIN
+        SET @UserId = 0;
+        SET @StatusMessage = 'Email already exists';
+        RETURN;
+    END
+
+    INSERT INTO Users (Name, Email, Age)
+    VALUES (@Name, @Email, @Age);
+
+    SET @UserId = SCOPE_IDENTITY();
+    SET @StatusMessage = 'User created successfully';
+END
+```
+
+### EF Core: Calling Stored Procedure with OUTPUT Parameters:
+
+* EF Core uses ExecuteSqlRawAsync for non-query SPs.
+
+* Repository Method:
+
+```csharp
+public async Task<(int userId, string message)> CreateUserAsync(User user)
+{
+    var userIdParam = new SqlParameter
+    {
+        ParameterName = "@UserId",
+        SqlDbType = SqlDbType.Int,
+        Direction = ParameterDirection.Output
+    };
+
+    var messageParam = new SqlParameter
+    {
+        ParameterName = "@StatusMessage",
+        SqlDbType = SqlDbType.NVarChar,
+        Size = 100,
+        Direction = ParameterDirection.Output
+    };
+
+    await _context.Database.ExecuteSqlRawAsync(
+        "EXEC usp_CreateUser @Name, @Email, @Age, @UserId OUT, @StatusMessage OUT",
+        new SqlParameter("@Name", user.Name),
+        new SqlParameter("@Email", user.Email),
+        new SqlParameter("@Age", user.Age),
+        userIdParam,
+        messageParam
+    );
+
+    return (
+        (int)userIdParam.Value,
+        messageParam.Value?.ToString()
+    );
+}
+```
+
+### API Controller Usage
+
+```csharp
+[HttpPost]
+public async Task<IActionResult> Create(User user)
+{
+    var result = await _repository.CreateUserAsync(user);
+
+    if (result.userId == 0)
+        return BadRequest(result.message);
+
+    return Ok(new
+    {
+        UserId = result.userId,
+        Message = result.message
+    });
+}
+```
+-------------------------------------------------------------
+
+## Why OUTPUT instead of SELECT?
+
+| OUTPUT                  | SELECT          |
+| ----------------------- | --------------- |
+| Structured return       | Result set      |
+| Multiple values         | Harder to parse |
+| Better for status codes | Mainly for data |
+
+-------------------------------------------------------------
+
+## Why it is recommended to set Size for NVARCHAR?
+
+* Without size: SQL Server throws runtime error or truncates value.
+
+-------------------------------------------------------------
+
+## What happens if OUTPUT param is NULL?
+
+* If an OUTPUT parameter is NULL, EF Core returns DBNull.Value, not null, and it must be explicitly checked to avoid runtime exceptions.
+* Explicit DBNull check (Recommended)
+
+```csharp
+string? msg = Convert.IsDBNull(messageParam.Value)
+    ? null
+    : messageParam.Value.ToString();
+```
+
+-------------------------------------------------------------
+
+## OUTPUT Parameter vs SCOPE_IDENTITY()   
+
+* SCOPE_IDENTITY() is used INSIDE the stored procedure
+* OUTPUT parameters are used to return values OUTSIDE the stored procedure
+* They are not competitors — they are used together.
+
+| Feature                | OUTPUT Parameter       | SCOPE_IDENTITY()     |
+| ---------------------- | ---------------------- | -------------------- |
+| Purpose                | Return value to caller | Fetch identity value |
+| Where used             | SP ↔ Application       | Inside SP only       |
+| Return multiple values | ✅ Yes                 | ❌ No                 |
+| Strong typing          | ✅ Yes                 | ❌ No                 |
+| Accessible in C#       | ✅ Yes                 | ❌ No                 |
+| Safe with triggers     | ✅ Yes (via SP)        | ✅ Yes                |
+| Recommended for apps   | ✅ Yes                 | ❌ No                 |
+
+
+Use SCOPE_IDENTITY() inside the stored procedure to get the identity value, and return it to the application using an OUTPUT parameter. 
+Never call SCOPE_IDENTITY() directly from application code.
+
+
+-------------------------------------------------------------
+
+## When to Use EF Core + Stored Procedures?
+
+| Scenario                | Recommendation   |
+| ----------------------- | ---------------- |
+| Complex joins/reporting | Stored Procedure |
+| CRUD heavy apps         | EF Core LINQ     |
+| Legacy DB               | Stored Procedure |
+| High performance        | SP + Dapper      |
+| Simple apps             | EF Core          |
+
+-------------------------------------------------------------
 
  ## Cloudflare
 

@@ -125,8 +125,18 @@ Both sides say:<br/>
 
 ### mTLS usages:
 
-Microservices communication
-API Gateway → Backend APIs
-Payment systems
-Banking / Healthcare systems
-Internal admin APIs
+* Microservices communication
+* API Gateway → Backend APIs
+* Payment systems
+* Banking / Healthcare systems
+* Internal admin APIs
+
+
+| Method   | Security      | Best for                    |
+| -------- | ------------- | --------------------------- |
+| API Key  | Low           | Internal quick setup        |
+| OAuth2   | High          | User authentication         |
+| **mTLS** | **Very High** | **Service-to-service auth** |
+
+
+-------------------------------------------------------------
