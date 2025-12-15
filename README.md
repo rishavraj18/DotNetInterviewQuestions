@@ -172,10 +172,10 @@ context.Users
 
 ### 4)  XSS (Cross-Site Scripting)
 
-Injecting malicious JavaScript into web pages
-Types : Stored XSS, Reflected XSS, DOM-based XSS
-Impact : Session hijacking, Cookie theft, Account takeover
-Prevention : Output encoding, Content Security Policy (CSP), WAF XSS filters
+* Injecting malicious JavaScript into web pages
+* Types : Stored XSS, Reflected XSS, DOM-based XSS
+* Impact : Session hijacking, Cookie theft, Account takeover
+* Prevention : Output encoding, Content Security Policy (CSP), WAF XSS filters
 
 e.g. Razor automatically HTML-encodes output
 

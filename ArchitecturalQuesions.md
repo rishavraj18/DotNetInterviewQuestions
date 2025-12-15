@@ -49,6 +49,9 @@ e.g. Cloudflare, Akamai, Azure Front Door
 
 #### Rate limiting:
 
+* ASP.NET Core provides built-in rate limiting using fixed, sliding, and token bucket algorithms starting from .NET 7.
+* For distributed systems, rate limiting should be enforced at API Gateway or using Redis.
+* 429 Too Many Requests is returned when the limit is exceeded.
 * Restricts the number of requests per client/IP/token in a given time window
 * It is applied at CDN / API Gateway level (first line of defense), Sometimes also inside ASP.NET Core (AddRateLimiter)
 * Prevents abuse, brute-force attacks, and API overuse and Protects backend resources
@@ -97,6 +100,70 @@ Backend Services (DB, Cache, MQ)
 * Inspects HTTP requests and responses, Uses predefined and custom security rules
 
 -------------------------------------------------------------
+## Throttling vs Rate Limiting:
+
+| Feature         | Throttling       | Rate Limiting    |
+| --------------- | ---------------- | ---------------- |
+| Behavior        | Slows requests   | Rejects requests |
+| Excess requests | Queued / delayed | Blocked          |
+| Response        | Delayed success  | 429 error        |
+| User experience | Slower           | Hard failure     |
+| Resource usage  | Higher (queues)  | Lower            |
+| Best for        | Internal systems | Public APIs      |
+| controls        | Speed            | Count            |
+
+-------------------------------------------------------------
+
+## Throttling:
+
+```csharp
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddConcurrencyLimiter("concurrent", opt =>
+    {
+        opt.PermitLimit = 5;   // max concurrent requests
+        opt.QueueLimit = 10;   // queued requests
+    });
+});
+```
+
+*API Gateway*
+
+* Allows only 5 concurrent requests
+* Others wait in queue
+
+*E-commerce Checkout*
+
+* Throttles payment requests during flash sales
+* Prevents DB overload
+
+*Background Workers*
+
+* Processes jobs slowly to avoid DB saturation
+
+#### Throttling at Infrastructure Level (Best)
+
+* NGINX (limit_req, limit_conn)
+* API Gateway (Azure APIM, AWS API Gateway)
+* Cloudflare
+
+-------------------------------------------------------------
+
+### Use Throttling when:
+
+* Internal APIs
+* Background processing
+* Controlled client systems
+* You prefer slow responses over failures
+
+### Use Rate Limiting when:
+
+* Public APIs
+* Security-sensitive endpoints
+* Prevent abuse
+* Cost control
+
+-------------------------------------------------------------
 
 ## mTLS:
 
@@ -104,8 +171,8 @@ Backend Services (DB, Cache, MQ)
 
 | Feature              | TLS (HTTPS)     | mTLS                                 |
 | -------------------- | --------------- | ------------------------------------ |
-| Client authenticated | ❌ No            | ✅ Yes                                |
-| Server authenticated | ✅ Yes           | ✅ Yes                                |
+| Client authenticated | ❌ No            | ✅ Yes                              |
+| Server authenticated | ✅ Yes           | ✅ Yes                              |
 | Security level       | High            | **Very High**                        |
 | Typical use          | Public websites | **Service-to-service communication** |
 
