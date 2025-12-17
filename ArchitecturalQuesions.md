@@ -464,3 +464,182 @@ Move these out of monolith:<br/>
 
 * Must-have before scaling: Distributed tracing (OpenTelemetry), Centralized logging, Metrics (Prometheus)
 * Add resilience: Retries, Circuit breakers (Polly), Timeouts, Fallbacks
+
+-------------------------------------------------------------
+
+## Explain data consistency patterns (Saga, Outbox)?
+
+Saga manages consistency across multiple microservices by executing local transactions and compensating on failure, avoiding distributed transactions.
+Outbox ensures reliable event publishing by storing events in the same database transaction as business data.
+Together, they provide eventual consistency in microservice architectures.
+
+### A Saga is a sequence of local transactions across multiple services, where:
+* Each service performs its own transaction
+* If something fails, compensating actions are executed
+
+### The Outbox Pattern ensures reliable event publishing when a service updates its database.
+
+* Service updates its DB
+* Service writes an event record to an Outbox table in the same transaction
+* Background worker reads Outbox table
+* Publishes events to message broker
+* Marks Outbox record as processed
+
+
+| Feature           | Saga                           | Outbox                          |
+| ----------------- | ------------------------------ | ------------------------------- |
+| Purpose           | Manage multi-service workflows | Reliable event publishing       |
+| Solves            | Cross-service consistency      | DB ↔ Message broker consistency |
+| Scope             | Business process               | Infrastructure reliability      |
+| Uses compensation | ✔ Yes                          | ❌ No                          |
+| Works with events | ✔ Yes                          | ✔ Yes                          |
+
+
+-------------------------------------------------------------
+
+## How do you design an application to handle peak traffic (10x sudden load)?
+
+To handle sudden 10× traffic, I design the system with CDN and rate limiting at the edge, stateless horizontally scalable services, multi-level caching, 
+asynchronous processing via queues, database protection with read replicas and circuit breakers, and graceful degradation. 
+Auto-scaling and observability ensure the system absorbs spikes without crashing.
+
+-------------------------------------------------------------
+
+## Explain how you would implement caching at different layers (DB, API, Client).
+
+Caching should be layered, not single-point. Each layer reduces load on the next one down. Cache as close to the user as possible and invalidate as close to the data as necessary.
+
+### (A) Database-Level Caching (Closest to Data):
+
+* Reduce DB CPU, I/O, and query execution time.
+
+#### 1) Query Result Cache (DB Engine)
+
+*SQL Server buffer pool caches:*
+
+* Data pages
+* Execution plans
+
+*Automatic, but:*
+
+* Cleared under memory pressure
+* Not enough for high traffic
+
+
+#### 2) Read Replicas
+
+* Offload reads from primary DB
+* Used with heavy read workloads
+
+When DB Cache is Useful<br/>
+
+* Complex queries
+* Reporting
+* Aggregations
+
+### (B) API-Level Caching (Most Important Layer):
+
+Avoid hitting DB entirely for repeated requests.
+
+#### 1) In-Memory Cache:
+
+* IMemoryCache (Single Instance)
+* Limitations: Not shared across instances, Lost on restart
+
+```csharp
+services.AddMemoryCache();
+
+var data = await _cache.GetOrCreateAsync("products", async entry =>
+{
+    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+    return await _repo.GetProductsAsync();
+});
+```
+
+#### 2) Distributed Cache (Recommended):
+
+* Example : Redis
+* Benefits : Shared across instances, Survives restarts, Scales horizontally
+
+```csharp
+services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = "localhost:6379";
+});
+```
+
+```csharp
+var cached = await _cache.GetStringAsync(key);
+if (cached == null)
+{
+    var data = await GetFromDb();
+    await _cache.SetStringAsync(key, Json, new DistributedCacheEntryOptions
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+    });
+}
+```
+
+#### 3) Output Caching (ASP.NET Core 7+)
+
+* Caches full HTTP response 
+* Very effective for GET APIs
+
+```csharp
+services.AddOutputCache();
+
+app.UseOutputCache();
+
+[OutputCache(Duration = 60)]
+public IActionResult GetProducts() => Ok(data);
+```
+
+| Strategy      | Use Case           |
+| ------------- | ------------------ |
+| TTL           | Simple data        |
+| Key eviction  | Known changes      |
+| Event-based   | Microservices      |
+| Write-through | Strong consistency |
+
+
+### (C) Client-Side Caching (Closest to User):
+
+* Eliminate network calls completely.
+
+#### 1) Browser Cache (HTTP Headers)
+
+```http
+Cache-Control: public, max-age=3600
+ETag: "v1"
+```
+
+```csharp
+[ResponseCache(Duration = 60, Location = ResponseCacheLocation.Client)]
+```
+
+#### 2) CDN / Edge Cache (Cloudflare):
+
+* Cache static files
+* Cache public GET APIs
+
+Use cache keys:
+* URL
+* Headers
+
+Query params:
+* Often reduces 70–80% traffic.
+
+
+#### Cache Invalidation Across Layers:
+
+* If data changes, invalidate from the top layer down
+
+```csharp
+DB Update
+  ↓
+Invalidate Redis
+  ↓
+Invalidate Output Cache
+  ↓
+Purge CDN
+```
