@@ -1065,15 +1065,16 @@ Client → Order API (Request-Response)
 
 ```
 
-Choose Request-Response when:
+*Choose Request-Response when:*
 
 ✅ Immediate response needed
 ✅ Strong consistency required
 ✅ Simple workflows
 
-Choose Event-Driven when:
+*Choose Event-Driven when:*
 
 ✅ High scalability needed
 ✅ Loose coupling required
 ✅ Many downstream consumers
+
 -------------------------------------------------------------
