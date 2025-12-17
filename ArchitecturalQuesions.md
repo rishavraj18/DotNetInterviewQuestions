@@ -839,3 +839,241 @@ readinessProbe:
     port: 80
 ```
 -------------------------------------------------------------
+
+## Delivery Semantics
+
+* Message delivery semantics define how many times a message is delivered to a consumer.
+* At-least-once delivery guarantees no message loss but allows duplicates, so consumers must be idempotent. Exactly-once delivery ensures messages are processed only once but is complex and expensive to achieve in distributed systems. In practice, most systems prefer at-least-once delivery combined with idempotent processing for scalability and reliability.
+
+
+| Feature        | At-Least-Once       | Exactly-Once |
+| -------------- | ------------------- | ------------ |
+| Message loss   | ❌ No                | ❌ No         |
+| Duplicates     | ✔ Possible          | ❌ No         |
+| Complexity     | Low                 | Very high    |
+| Performance    | High                | Lower        |
+| Scalability    | Excellent           | Limited      |
+| Common usage   | Very common         | Rare         |
+| Consumer logic | Idempotent required | Simpler      |
+| Cloud friendly | ✔ Yes               | ⚠️ Limited   |
+
+
+* At-Least-Once : RabbitMQ, Azure Service Bus, AWS SQS, Kafka (default behavior)
+* Exactly-Once : Kafka : Idempotent producers
+
+
+-------------------------------------------------------------
+
+## How would you design a secure authentication system using JWT/OAuth ?
+
+JWT is not authentication — OAuth/OIDC is. JWT is just the token format.
+
+I design authentication using OAuth 2.0 with OpenID Connect, issuing short-lived JWT access tokens and securely stored refresh tokens. APIs validate JWTs using asymmetric keys, while authorization is enforced via scopes and policies. Token rotation, TLS, rate limiting, and secure storage ensure the system is resilient against common attacks.
+
+* Designing a secure authentication system using JWT and OAuth 2.0 / OpenID Connect (OIDC) requires clear separation of authentication, authorization, and token handling.
+* Below is a production-grade design, aligned with how real systems (Auth0, Azure AD, Keycloak) work.
+
+
+| Term           | Meaning                       |
+| -------------- | ----------------------------- |
+| Authentication | Who you are                   |
+| Authorization  | What you can access           |
+| OAuth 2.0      | Authorization framework       |
+| OpenID Connect | Authentication layer on OAuth |
+| JWT            | Token format                  |
+
+
+### High-Level Architecture:
+
+```json
+Client (Web / Mobile)
+   |
+Authorization Server (OAuth / OIDC)
+   |
+Resource Server (API)
+```
+
+* Authorization Server → Issues tokens
+* Resource Server (API) → Validates tokens
+* Client → Uses tokens
+
+### JWT Design (Security Best Practices)
+
+#### 1) Claims:
+
+```json
+{
+  "sub": "user-id",
+  "iss": "auth-server",
+  "aud": "api",
+  "exp": 1710000000,
+  "scope": "orders.read"
+}
+```
+
+#### 2) Signing:
+
+* Use RS256 (asymmetric)
+* Private key → Auth server
+* Public key → APIs
+* Enables key rotation
+* Avoid : Long-lived JWTs, Storing JWT in localStorage
+
+
+#### 3) Token Validation in API (ASP.NET Core)
+
+```csharp
+builder.Services.AddAuthentication("Bearer")
+.AddJwtBearer("Bearer", options =>
+{
+    options.Authority = "https://auth.example.com";
+    options.Audience = "api";
+});
+
+```
+
+* Signature validation
+* Issuer & audience check
+* Expiry enforcement
+
+#### 4) Authorization
+
+*Scope-Based:*
+
+```csharp
+scope: orders.read orders.write
+
+[Authorize("orders.read")]
+```
+
+*Role-Based:*
+
+```csharp
+[Authorize(Roles = "Admin")]
+```
+
+*Policy-Based:*
+
+```csharp
+services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanEditOrder",
+        policy => policy.RequireClaim("scope", "orders.write"));
+});
+```
+
+#### 5) Token Refresh & Revocation:
+
+*Refresh Token Rotation:*
+
+* New refresh token issued every time
+* Old token invalidated
+
+*Revocation Strategy:*
+
+* Short access-token lifetime
+* Maintain refresh-token store
+* Blacklist for critical revocations
+
+#### 6) Protect Against Common Attacks
+
+| Threat            | Protection                      |
+| ----------------- | ------------------------------- |
+| Token theft       | Short TTL + HTTPS               |
+| Replay            | jti + nonce                     |
+| XSS               | HttpOnly cookies                |
+| CSRF              | SameSite cookies + anti-forgery |
+| Man-in-the-middle | TLS + HSTS                      |
+| Brute force       | Rate limiting                   |
+
+
+#### 7) Microservices Integration:
+
+* Central Auth Server : Keycloak / Auth0 / Azure AD
+* API Gateway : Token validation, Rate limiting, Header propagation
+
+
+
+-------------------------------------------------------------
+
+## What trade-offs exist between event-driven architecture vs request-response?
+
+### High-Level Difference
+
+| Aspect        | Request–Response | Event-Driven                       |
+| ------------- | ---------------- | ---------------------------------- |
+| Communication | Synchronous      | Asynchronous                       |
+| Coupling      | Tight            | Loose                              |
+| Flow          | Caller waits     | Fire-and-forget                    |
+| Typical tech  | HTTP, gRPC       | Kafka, RabbitMQ, Azure Service Bus |
+
+### Consistency
+
+| Model            | Consistency |
+| ---------------- | ----------- |
+| Request-Response | Strong      |
+| Event-Driven     | Eventual    |
+
+### Performance & Latency Trade-off
+
+| Concern      | Request-Response | Event-Driven              |
+| ------------ | ---------------- | ------------------------- |
+| Latency      | Low (single hop) | Higher (async processing) |
+| Throughput   | Limited          | High                      |
+| Peak traffic | Hard             | Easy                      |
+
+
+
+### Request-Response (Sync) :
+
+#### Advantages:
+
+* Simple to understand & debug
+* Client knows success/failure instantly
+* Good for: Login, Checkout validation, Data fetch APIs
+* Strong consistency : Transaction completes before response
+
+#### Disadvantages:
+
+* Tight coupling
+* Scalability bottleneck
+* Poor resilience
+
+### Event-Driven Architecture (Async)
+
+#### Advantages
+
+* Loose coupling: Producer doesn’t know consumers, Services evolve independently
+* High scalability: Services process events at their own pace, Easy to scale consumers horizontally
+* Better resilience
+
+#### Disadvantages:
+
+* Eventual consistency
+* Increased complexity : Message brokers, Idempotency, Schema versioning, Distributed tracing, Debugging is harder
+
+
+#### Most production systems use both. Hybrid approach. Example: E-commerce
+
+```csharp
+Client → Order API (Request-Response)
+              |
+              └─ OrderCreated Event
+                   ├─ Email Service
+                   ├─ Inventory Service
+                   └─ Analytics Service
+
+```
+
+Choose Request-Response when:
+
+✅ Immediate response needed
+✅ Strong consistency required
+✅ Simple workflows
+
+Choose Event-Driven when:
+
+✅ High scalability needed
+✅ Loose coupling required
+✅ Many downstream consumers
+-------------------------------------------------------------
