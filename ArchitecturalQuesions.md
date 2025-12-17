@@ -643,3 +643,199 @@ Invalidate Output Cache
   ↓
 Purge CDN
 ```
+
+-------------------------------------------------------------
+
+## How do you ensure fault tolerance and resiliency in distributed systems?
+
+I ensure fault tolerance by using redundancy, stateless services, load balancing, retries with backoff, circuit breakers, asynchronous messaging, and graceful degradation. Observability, idempotency, and chaos testing ensure the system recovers quickly without cascading failures.
+
+* Ensuring fault tolerance and resiliency in distributed systems means designing the system to expect failures, contain them, and recover automatically without cascading outages.
+* Failures are normal. Design for failure, not for success.
+
+### 1) Redundancy & High Availability:
+
+* Multiple Instances
+* Multi-AZ / Multi-Region
+
+### 2) Load Balancing:
+
+Load Balancers - Route only to healthy instances, Automatic failover
+
+### 3) Health Checks:
+
+* A health check endpoint reports the status of - The API process, Its dependencies (DB, Redis, RabbitMQ, etc.)
+
+#### Used by:
+
+* Load Balancers (L7)
+* Kubernetes (liveness / readiness)
+* Monitoring tools (Prometheus, App Insights)
+
+### 4) Stateless Services:
+
+* Stateless services scale and recover easily.
+* JWT
+* Distributed cache (Redis)
+
+
+### 5) Asynchronous & Event-Driven Design:
+
+* Message Queues : RabbitMQ / Kafka / Service Bus
+* Absorbs spikes
+* Prevents cascading failures
+
+### 6) Data Resilience
+
+* Database Replication: Primary + read replicas, Automatic failover
+* Eventual Consistency : Saga pattern, Compensating transactions
+* Outbox Pattern : Prevent lost messages
+
+### 7) Graceful Degradation
+
+When parts fail:
+
+* Serve cached or stale data
+* Disable non-critical features
+* Return partial responses
+* Partial availability is better than downtime.
+
+### Observability & Fast Recovery
+
+#### Monitoring
+
+* Latency (p95/p99)
+* Error rate
+* Saturation
+
+#### Logging & Tracing
+
+* Centralized logs (ELK)
+* Distributed tracing (OpenTelemetry)
+
+#### Alerting
+
+* Actionable alerts only
+
+### 7) Chaos & Failure Testing
+
+#### Test:
+
+* Instance crashes
+* Network latency
+* DB slowdowns
+* Message loss
+* Tools: Chaos Monkey, k6, Fault injection
+
+| Failure              | Strategy             |
+| -------------------- | -------------------- |
+| Payment API slow     | Circuit breaker      |
+| Notification failure | Queue + retry        |
+| DB overload          | Cache + read replica |
+| Service crash        | Auto-restart         |
+| Region down          | Multi-AZ failover    |
+
+
+-------------------------------------------------------------
+
+## Healthcheck Types:
+
+**1) Liveness Probe**
+
+```csharp
+GET /health/live
+```
+
+* Check if the app running?
+* Detects deadlocks, crashes
+* If fails → container restarted
+
+**2) Readiness Probe**
+
+```csharp
+GET /health/ready
+```
+
+* Is the app ready to receive traffic?
+* Checks DB, cache, external services
+* If fails → traffic is stopped (but app not restarted)
+
+**3) Startup Probe (K8s)**
+
+* Has the app fully started?
+* Used when startup is slow (migrations, warmup)
+
+
+-------------------------------------------------------------
+
+## Implementing Healthchecks in 
+
+### 1) ASP.Net core:
+
+Health checks are lightweight API endpoints that report application and dependency health. Load balancers and Kubernetes use them to route traffic, restart unhealthy instances, and maintain high availability.
+
+#### Step 1: Add Health Checks
+
+```csharp
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy())
+    .AddSqlServer(
+        connectionString: builder.Configuration.GetConnectionString("Default"))
+    .AddRedis("localhost:6379");
+```
+
+
+#### Step 2: Map Endpoints
+
+```csharp
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Name == "self"
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = _ => true
+});
+```
+
+#### Sample Health Check Response
+
+```json
+{
+  "status": "Healthy",
+  "checks": [
+    {
+      "name": "sqlserver",
+      "status": "Healthy",
+      "duration": "00:00:00.021"
+    }
+  ]
+}
+```
+
+### 2) YARP:
+
+* Active Health Checks (Polling) : YARP periodically calls backend /health/ready.
+* Passive Health Checks (Failure-based) : YARP marks a service unhealthy when requests fail (5xx, timeout)
+
+### 3) Ocelot Health Checks:
+
+Ocelot relies more on downstream health endpoints and load balancer awareness.
+
+### 4) Gateway + Kubernetes 
+
+```json
+# Gateway
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 80
+
+# Backend services
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 80
+```
+-------------------------------------------------------------
