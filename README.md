@@ -786,6 +786,11 @@ Cloudflare Workers & Edge Cache can cache even API responses.
 
 
  -------------------------------------------------------------
+ ## Reverse Proxy vs Gateway:
+
+ A Reverse Proxy handles generic web traffic (HTTP/S), focusing on load balancing, caching, SSL termination, and hiding servers, acting as a simple front door. An API Gateway is a specialized, feature-rich reverse proxy for microservices, adding API management functions like advanced routing (paths, headers, logic), authentication (OAuth, JWT), rate limiting, orchestration, and detailed monitoring, managing API-specific traffic. Essentially, all API gateways are reverse proxies, but not all reverse proxies are API gateways; gateways offer deeper application-level control for complex APIs. 
+
+  -------------------------------------------------------------
 
  ## Interface vs Abstract class
 
