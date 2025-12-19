@@ -328,8 +328,12 @@ public class UsersController : ControllerBase
 
 *Step 5: ADependency Injection (Program.cs)*
 
-builder.Services.AddScoped<UserRepository>();
+```csharp
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<UserRepository>();
+```
 
 #### API Call Example:
 GET /api/users?isActive=true&minAge=18
