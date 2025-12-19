@@ -207,6 +207,17 @@ Database
 
 -------------------------------------------------------------
 
+## Difference Between ROW_NUMBER, RANK, and DENSE_RANK
+
+| Feature            | ROW_NUMBER | RANK        | DENSE_RANK  |
+| ------------------ | ---------- | ----------- | ----------- |
+| Duplicate handling | ❌ Ignored  | ✅ Same rank | ✅ Same rank |
+| Rank gaps          | ❌ No       | ✅ Yes       | ❌ No        |
+| Unique numbers     | ✅ Always   | ❌ No        | ❌ No        |
+| Best for           | Pagination | Competition | Nth highest |
+
+-------------------------------------------------------------
+
  ## Parameterized Stored Procedure
 
 * Step 1: SQL Server: Parameterized Stored Procedure*
