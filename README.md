@@ -1349,6 +1349,18 @@ But want to hide implementation (good abstraction)
 Caller needs indexing
 You need List-specific features
 
+IEnumerable<T> → Public APIs
+ICollection<T> → Domain models
+List<T>        → Internal processing
+
+| Type        | Analogy                     |
+| ----------- | --------------------------- |
+| IEnumerable | Restaurant menu (view only) |
+| ICollection | Shopping cart               |
+| List        | Kitchen inventory           |
+
+
+
 ------------------------------------------------------------
 
 ## How concurrent request is handled in asp.net core app ? Which Tool is popular ?
