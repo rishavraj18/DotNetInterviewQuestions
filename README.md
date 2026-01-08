@@ -1456,6 +1456,17 @@ ASP.NET Core achieves massive scalability through a combination of:
 | Simple controller | 400k–800k RPS |
 | DB-backed API     | 20k–80k RPS   |
 
+------------------------------------------------------------
+## HttpContext
+
+HttpContext
+ ├── Request   (Incoming data)
+ ├── Response  (Outgoing data)
+ ├── User      (Authenticated user)
+ ├── Session   (User-specific data)
+ ├── Items     (Per-request storage)
+ ├── Connection (Client info)
+
 
 ------------------------------------------------------------
 
