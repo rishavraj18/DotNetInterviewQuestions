@@ -62,6 +62,20 @@ https://learn.microsoft.com/bs-latn-ba/powershell/azure/install-az-ps?view=azps-
 
 ## Step By Step setup Azure for development:
 
-create Azure account
-install PowerShell
-install the Az module
+* create Azure account
+* install PowerShell
+* install the Az module
+
+to be continued...
+
+## Create Web App:
+
+* Subscription is a billing model. 
+* Resource group is for organising structure(like folder on desktop).
+* Name - unique
+* Publish - Code / container
+* Runtime stack - runtime version (e.g .NET 8/9/10 -> cross platform OS, ASP.Net V4.8 -> windows OS only) 
+* Region - More than 60 regions (Canada central, East US etc.)
+* Pricing plans - 
+
+to be continued...
