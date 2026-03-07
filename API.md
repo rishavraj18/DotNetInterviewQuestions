@@ -140,3 +140,44 @@ api-deprecated-versions: 1.0
   }
   ]
 ```
+
+### 2) POST Method
+
+#### A) 415 Unsupported Media Type
+
+#### Request
+
+```sample code
+POST {{site}}/api/customers
+Accept: application/json
+
+Foo bar
+```
+
+#### Response
+
+```sample code
+HTTP/1.1 415 Unsupported Media Type
+```
+
+#### B) 400 Bad Request
+
+#### Request
+
+```sample code
+POST {{site}}/api/customers
+Accept: application/json
+Content-Type: application/json
+
+
+Foo bar
+```
+
+#### Response
+
+```sample code
+HTTP/1.1 400 Bad Request
+```
+
+
+
