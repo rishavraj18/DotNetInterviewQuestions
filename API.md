@@ -71,3 +71,72 @@
 * HTML, CSS, JavaScript, XML, JSON
 * Binary and blobs common (e.g. jpg)
 * APIs often have their own types
+
+## Sample code
+
+### Testing API
+
+```sample code
+@site=https://restdesign.dev
+GET {{site}}
+```
+
+### 1) GET Method
+
+#### Request
+
+```sample code
+GET {{site}}/api/customers
+Accept: application/json
+```
+
+#### Response
+
+```sample code
+HTTP/1.1 200 OK
+Connection: close
+Content-Type: application/json; charset=utf-8
+Date: Sat, 07 Mar 2026 08:13:27 GMT
+Server: Kestrel
+Cache-Control: public,max-age=60
+ETag: "BE2FACBEE107B16CE352A6E8010D3A01"
+Expires: Sat, 07 Mar 2026 08:14:28 GMT
+Last-Modified: Sat, 07 Mar 2026 08:13:28 GMT
+Transfer-Encoding: chunked
+Vary: Accept, Accept-Language, Accept-Encoding
+api-supported-versions: 2.0
+api-deprecated-versions: 1.0
+
+[
+  {
+    "id": 9,
+    "companyName": "Blanda and Sons",
+    "contact": "Claudie Lynch",
+    "phoneNumber": "623-369-5083 x379",
+    "email": null,
+    "addressLine1": "715 Benny Center",
+    "addressLine2": null,
+    "addressLine3": null,
+    "city": "Fernandoburgh",
+    "stateProvince": "MN",
+    "postalCode": "77240-3310",
+    "country": null,
+    "projects": []
+  },
+  {
+    "id": 22,
+    "companyName": "Cole LLC",
+    "contact": "Ardella Pollich",
+    "phoneNumber": "1-570-784-7651 x491",
+    "email": null,
+    "addressLine1": "480 Shanon Bridge",
+    "addressLine2": null,
+    "addressLine3": null,
+    "city": "Rooseveltside",
+    "stateProvince": "TX",
+    "postalCode": "59829-8000",
+    "country": null,
+    "projects": []
+  }
+  ]
+```
