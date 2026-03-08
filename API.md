@@ -232,3 +232,4 @@ b) They need to be productive
 * Payments
 * Products
 
+![Resources](/img/Resources.JPG "Resources")
