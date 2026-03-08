@@ -14,6 +14,9 @@
 
 ### Request Deconstructed:
 
+#### URI
+* URI & Querystring
+
 #### Verb
 
 * Action to perform on the server.
@@ -34,7 +37,7 @@
 
 #### Content:
 
-* Data to send to server
+* Request body : Data to send to server
 * HTML, CSS, JavaScript, XML, JSON
 * Content is not valid with some verbs
 * Information to help fulfill request
@@ -68,6 +71,7 @@
 
 #### Content:
 
+* Response body
 * HTML, CSS, JavaScript, XML, JSON
 * Binary and blobs common (e.g. jpg)
 * APIs often have their own types
@@ -179,5 +183,52 @@ Foo bar
 HTTP/1.1 400 Bad Request
 ```
 
+## REST:
 
+* Represenatational state transfer
+* Separation of client and server
+* Servers are stateless
+* Cacheable requests
+* Uniform interface
+
+### Problems:
+
+* To difficult to be qualified as "REST"
+* Dogma of REST vs Pragmatism
+
+a) Structure architecture style<br/>
+b) They need to be productive
+
+## Designing RESTful web APIs:
+
+* Design first
+* REST requests
+* Verbs
+* Resources(Nouns)
+* Idempotency
+* Designing results
+* Formatting results
+
+### Design your API first
+
+* Can't fix an API after publishing
+* Too easy to add ad-hoc endpoints
+* Helps understand the requirements
+* Well designed API can mature
+
+#### URIs:
+
+* URIs are just paths to resources
+<br/>e.g. api.yourserver.com/people
+
+* Query strings for non-data elements
+<br/>e.g. format, sorting, searching, paging etc.
+
+#### Resources:
+
+* Real world objects
+* People
+* Invoices
+* Payments
+* Products
 
