@@ -226,10 +226,67 @@ b) They need to be productive
 
 #### Resources:
 
-* Real world objects
+Real world objects:
 * People
 * Invoices
 * Payments
 * Products
 
 ![Resources](/img/Resources.JPG "Resources")
+
+
+#### Identifiers in URI:
+
+Use unique identifiers
+Doesnot have to be primary keys
+
+```sample code
+api/customers
+api/customers/2
+api/customers/microsoft
+api/customers/msft
+```
+
+#### Query Strings:
+
+Use for non-resource properties
+
+```sample code
+/customers?includeProjects=true/tickets?page=1
+```
+
+![REST-Verb](/img/REST-Verb.JPG "REST-Verb")
+
+![Verbs-URIs](/img/Verbs-URIs.JPG "Verbs-URIs")
+
+#### Idempotency:
+
+* Operations result in same side effect
+<br/>GET, PUT, PATCH, and DELETE
+
+* POST is not idempotent
+
+#### Decide formats during design:
+
+Abide by Accept header
+```sample code
+Accept: application/json, text/html
+```
+
+Return Sane default (usually JSON)
+```sample code
+Content-Type: application/json
+```
+
+Prefer NOT to use query strings for formats:
+```sample code
+/api/customer?format=json  // <- Antipattern
+```
+
+#### Common Formats:
+
+JSON : application/json
+XML : text/xml
+JSONP : application/javascript
+RSS : application/xml+rss
+ATOM : application/xml+atom
