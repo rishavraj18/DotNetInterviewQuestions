@@ -520,3 +520,50 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 
 ![CORS3](/img/CORS3.JPG "CORS3")
 
+
+#### Authentication vs Authorization:
+
+![Auth](/img/Auth.JPG "Auth")
+
+![AuthenticationTypes](/img/AuthenticationTypes.JPG "AuthenticationTypes")
+
+#### Cookies
+
+* Cookies are easy and common
+* Subject to request forgery
+* Depends on your security needs
+* Banks and Pizza app are not equal
+
+#### Basic Auth
+
+* Easy to implement
+* Not secure, unless enforcing SSL 
+* Risky still
+    - Sends credentials on every request
+    - Increase surface area of attacks
+
+#### Token based Auth
+
+* Typical for APIs - mix of secure and simplicity
+* Industry standard tokens are easy
+* Should expire much faster than cookies : typically 5-20 mins
+
+![TokenAuthentication](/img/TokenAuthentication.JPG "TokenAuthentication")
+
+#### JWTs (JSON Web Tokens):
+
+* Industry standard
+* Self-contained, small, and complete
+* User information, Claims, Validation signature, other information
+
+![JWTAnatomy](/img/JWTAnatomy.JPG "JWTAnatomy")
+
+#### OAuth:
+
+* Use trusted 3rd-party to identify
+* You never recieve the credentials
+* User authenticates with 3rd party
+* Use token to confirm identity
+* Safer for user
+
+![OAuth](/img/OAuth.JPG "OAuth")
