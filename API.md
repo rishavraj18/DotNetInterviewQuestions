@@ -419,3 +419,69 @@ https://foo.org/api/v2/Customers
 - Very clear to clients where the version is handled
 
 <br/>Cons:
+
+- Every version needs to change the URIs, can be brittle
+
+<br/>2) Versioning with Query string
+
+```sample code
+https://foo.org/api/Customers?v=2.0
+```
+
+<br/>Pros:
+
+- Versioning is optional included (can use default version)
+
+<br/>Cons:
+
+- Too easy for clients to miss needing the version
+
+<br/>3) Versioning with Headers
+
+```sample code
+GET /api/camps HTTPS/1.1
+Host: localhost:44388
+Content-Type: application/json
+X-Version: 2.0
+```
+
+<br/>Pros:
+
+- Separates versioning from the rest of the API
+
+<br/>Cons:
+
+- Requires more sophisticated developer to manipulate headers
+
+<br/>4) Versioning with Accept Header
+
+```sample code
+GET /api/camps HTTPS/1.1
+Host: localhost:44388
+Content-Type: application/json
+Accept: application/json; version=2.0
+```
+
+<br/>Pros:
+
+- No need to create your own custom header
+
+<br/>Cons:
+
+- Even less discoverable than query strings
+
+<br/>5) Versioning with Content Type
+
+```sample code
+GET /api/camps HTTPS/1.1
+Host: localhost:44388
+Content-Type: application/vnd.yourapp.camp.v1+json
+```
+
+<br/>Pros:
+
+- Can version the payload as well as the API call itself
+
+<br/>Cons:
+
+- Requires a lot more development maturity to create and maintain
