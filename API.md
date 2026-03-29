@@ -485,3 +485,38 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 <br/>Cons:
 
 - Requires a lot more development maturity to create and maintain
+
+#### Locking down your API:
+
+- APIs and security
+- Cross-domain security
+- Authentication/Authorizaation
+- Security considerations during design
+- Types of API security
+
+#### Protect your API:
+
+- Server infrastructure security : Outside scope of API security
+- Secure in-transit : SSL 
+- Secure API itself : Cross-origin security, Authorization/Authentication
+
+#### Cross domain security:
+
+- By default, not allowed : in browser only. Using scripts like python makes it insecure.
+- API is public or private : Public - should allow, Private - consider for partners
+- CORS (Cross-origin resource sharing) : allows control, domain/resource/verb control, only limits browser and not app
+
+#### How does CORS work ?
+
+<br/>Cross-Origing Request -> Browser Requests Access
+
+![CORS1](/img/CORS1.JPG "CORS1")
+
+<br/>Browser Requests Access -> Server Replies with Rules
+
+![CORS2](/img/CORS2.JPG "CORS2")
+
+<br/>Server Replies with Rules -> Browser issues with CORS Header
+
+![CORS3](/img/CORS3.JPG "CORS3")
+
