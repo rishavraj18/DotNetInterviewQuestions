@@ -285,8 +285,105 @@ Prefer NOT to use query strings for formats:
 
 #### Common Formats:
 
-JSON : application/json
-XML : text/xml
-JSONP : application/javascript
-RSS : application/xml+rss
-ATOM : application/xml+atom
+* JSON : application/json
+* XML : text/xml
+* JSONP : application/javascript
+* RSS : application/xml+rss
+* ATOM : application/xml+atom
+
+#### Designing Associations / Relational APIs:
+
+* For sub-objects: Use URI Navigation
+<br/>api/customers/123/Invoices
+
+* Should return list - same shapes
+<br/>api/customers/123/invoices
+<br/>api/invoices
+
+* Can have multiple associations
+<br/>api/customers/123/invoices
+<br/>api/customers/123/payments
+<br/>api/customers/123/shipments
+
+* Search should use queries
+<br/>api/customers?st=GA
+<br/>api/customers?st=GA&salesid=144
+<br/>api/customers?hasOpenOrders=true
+
+Paging:
+
+![Paging](/img/Paging.JPG "Paging")
+
+#### Error Handling:
+
+* Not just status codes
+* How do you communicate errors
+* How do you help the user recover
+
+* Return object with error info
+
+```sample code
+400 Bad Request
+{
+  error: "Failed to supply id"
+}
+```
+
+* Not necessary for obvious errors
+
+```sample code
+404 Not Found 
+```
+
+#### Caching:
+
+* Basic tenet of REST APIs
+* Server-side caching is good
+* But isn't what they mean
+* Use Http for caching mechanism
+
+![HTTPCaching](/img/HTTPCaching.JPG "HTTPCaching")
+
+![HTTPCaching1](/img/HTTPCaching1.JPG "HTTPCaching1")
+
+#### Entity Tags(ETags)
+
+* Strong and Weak Caching support
+* Returned in the response
+
+![ETag1](/img/ETag1.JPG "ETag1")
+
+![ETag2](/img/ETag2.JPG "ETag2")
+
+* Use 304 to indicate that it's cached
+
+```sample code
+HTTP/1.1 304 Not Modified
+```
+![ETag3](/img/ETag3.JPG "ETag3")
+
+```sample code
+HTTP/1.1 412 Preconditioned Failed
+```
+
+#### Functional APIs
+
+* Be Pragmatic
+* Make sure these are documented
+* Should be completely functional
+* Not an excuse to build an RPC API
+* Should be exception rather than rule
+
+#### Async APIs
+
+* Some APIs aren't RESTful in nature
+* Need long-life polling
+* Non-REST solutions are useful
+
+#### Async API solutions to consider:
+
+* Comet
+* gRPC
+* SignalR
+* Firebase
+* Socket.IO
