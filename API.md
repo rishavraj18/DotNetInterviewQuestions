@@ -387,3 +387,35 @@ HTTP/1.1 412 Preconditioned Failed
 * SignalR
 * Firebase
 * Socket.IO
+
+#### Versioning your API:
+
+<br/>Should you version your API ?
+
+* Once we publish, it's set in stone
+* User rely on the API not changing
+* But requirements will change
+
+<br/> Evolve the API without breaking clients:
+
+- API version isn't product version
+- Don't tie them together
+
+<br/> API versioning is harder
+
+- Needs to support both new and old
+- Side-by-side deployment isn't feasible
+
+#### Versioning strategies:
+
+<br/>1) Versioning in the URI path
+
+```sample code
+https://foo.org/api/v2/Customers
+```
+
+<br/>Pros:
+
+- Very clear to clients where the version is handled
+
+<br/>Cons:
