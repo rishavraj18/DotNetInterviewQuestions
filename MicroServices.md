@@ -39,7 +39,7 @@ AGILE or Waterfall
 
 ## Monolith:
 
-Designing a Monolith
+### Designing a Monolith
 
 ![DesignMonolith](/img/DesignMonolith.JPG "DesignMonolith")
 
@@ -56,8 +56,20 @@ Designing a Monolith
 ![Mono-Pros-Cons](/img/Mono-Pros-Cons.JPG "Mono-Pros-Cons")
 
 
-## Design MicroServices
+## Design MicroServices:
 
 Microservices are created using most popular domain driven design. Sharing database is anti-pattern in the microservices.
 
 ![DesignMicroServices](/img/DesignMicroServices.JPG "DesignMicroServices")
+
+## MicroServices organization:
+
+![Microservices-Team](/img/Microservices-Team.JPG "Microservices-Team")
+
+![Microservices-Codebase](/img/Microservices-Codebase.JPG "Microservices-Codebase")
+
+## MicroServices data store:
+
+![Microservices-DataStore](/img/Microservices-DataStore.JPG "Microservices-DataStore")
+
+## MicroServices user interface:
