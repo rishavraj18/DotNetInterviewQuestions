@@ -10,7 +10,49 @@ https://portal.azure.com/
 
 https://github.com/PowerShell/PowerShell/releases
 
-to be continued...
+### Learning paths on MS Learn:
+
+https://docs.microsoft.com/en-us/learn/certifications/exams/az-204#two-ways-to-prepare
+
+
+### Azure Code Samples:
+
+https://azure.microsoft.com/en-us/resources/samples/?sort=0
+
+
+### Official Azure Documentation:
+
+https://docs.microsoft.com/en-us/azure/
+
+
+
+### Official Microsoft Developer YouTube Channel
+
+https://www.youtube.com/channel/UCsMica-v34Irf9KVTh6xx-g
+
+
+
+### Azure REST API Browser
+
+https://docs.microsoft.com/en-us/rest/api/?view=Azure
+
+
+
+### Microsoft Labs and Workshops - Practice is the key to success
+
+* Azure Citadel - Labs and Workshops
+
+https://azurecitadel.com/
+
+
+### Github AZ-204 from Microsoft Training
+
+https://microsoftlearning.github.io/AZ-204-DevelopingSolutionsforMicrosoftAzure/
+
+### Microsoft has a Github page that contains labs for AZ-204:
+
+https://github.com/MicrosoftLearning/AZ-204-DevelopingSolutionsforMicrosoftAzure
+
 
 ## PowerShell Commands:
 
@@ -68,14 +110,70 @@ https://learn.microsoft.com/bs-latn-ba/powershell/azure/install-az-ps?view=azps-
 
 to be continued...
 
+## WebApp (PAAS):
+
+* Azure App service
+* Platform as a service
+
+## Running a WebApp in a VM:
+
+* It's is entirely possible to run a web application in a virtual machine
+* Install IIS on that VM
+* Deploy your web app to that environment
+* Responsibility : OS needs to be updated, dlls/apps installed on that machine, Open ports, virtual network settings etc.
+
+## The new App Service Paradigm:
+
+* Azure runs the server
+* You don't have control over the underlyning OS or choose the hardware
+* You pay for performance
+* You upload your code and data
+* Azure runs the app
+* Easy to scale, lots of developer bells and whistles, less worries
+* Similar price
+
+
 ## Create Web App:
 
-* Subscription is a billing model. 
-* Resource group is for organising structure(like folder on desktop).
-* Name - unique
+![CreateWebApp1](/img/CreateWebApp1.JPG "CreateWebApp1")
+
+* Subscription is a billing model (Azure subscription 1)
+* Resource group is for organising structure like folder on desktop (newwebapp)
+* Name - unique (rileo-h6a3cpfcfhhjdtbb.canadacentral-01.azurewebsites.net)
 * Publish - Code / container
 * Runtime stack - runtime version (e.g .NET 8/9/10 -> cross platform OS, ASP.Net V4.8 -> windows OS only) 
-* Region - More than 60 regions (Canada central, East US etc.)
-* Pricing plans - 
+* Region - More than 60 regions (Canada central, East US, South India etc.)
+* Windows Plan (Canada Central) - created ASPplandemo
+* Pricing plans 
 
-to be continued...
+![AppServicePricing](/img/AppServicePricing.JPG "AppServicePricing")
+
+![CreateWebApp2](/img/CreateWebApp2.JPG "CreateWebApp2")
+
+![CreateWebApp3](/img/CreateWebApp3.JPG "CreateWebApp3")
+
+![CreateWebApp4](/img/CreateWebApp4.JPG "CreateWebApp4")
+
+![VirtualNetworkSetup](/img/VirtualNetworkSetup.JPG "VirtualNetworkSetup")
+
+![CreateWebApp5](/img/CreateWebApp5.JPG "CreateWebApp5")
+
+![CreateWebApp6](/img/CreateWebApp5.JPG "CreateWebApp5")
+
+### Application Insights
+
+* Azure Monitor application insights is an Application Performance Management (APM) service for developers and DevOps professionals. It will detect performance anomalies, and includes powerful analytics tools to help you diagnose issues and to understand what users actually do with your app. Your bill is based on amount of data used by Application Insights and your data retention settings.
+* Enable Application Insights -> Feeds data in Azure monitor
+* Telemetry framework -> To push certain telemetry to application insights from custom code
+
+
+### Deploy an ASP.NET Core and Azure SQL Database app to Azure App Service:
+
+https://learn.microsoft.com/en-gb/azure/app-service/tutorial-dotnetcore-sqldb-app?tabs=copilot&pivots=azure-portal
+
+
+### Deploy to Azure App Service by using GitHub Actions:
+
+https://learn.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=openid%2Caspnetcore
+
+
