@@ -130,6 +130,50 @@ Microservices are created using most popular domain driven design. Sharing datab
 * WSDL, Swagger, IDL
 * Different devices, different needs, different APIs, different contracts
 
+## Distributed Services:
+
+![ServiceRegistry](/img/ServiceRegistry.JPG "ServiceRegistry")
+
+* When a Microservices(M1, M2, M3, M4) wants to interact with each other, it must be reliable. The microservice based application runs on environment, their network location changes dynamically.
+* Service registry : microservices do self registration of their network location on startup. Also de-register on shutdown.
+* Client needs to first discover the location of service instance by querying the registry.
+* It invoke the microservices
+* e.g. Eureka, Zookeeper, Consul
+
+### CORS:
+
+* Cross-origin resource sharing
+* Same-origin policy
+* Origin : Same protocol, server and port
+* Browser restrict cross-orign request
+* Additional HTTP headers to access selective resource from different server : Access-Control-Allow-Origin
+
+### Circuit Breaker:
+
+* Service avaialability is crucial in Microservice application. Request can failed due to : Network failure, Heavy load.
+* Domino effect : If failure occurs in one microservice, it cascades into another microservices. Later it can leads to failure of entire application.
+* To avoid domino effect, circuit breaker was introduced. Circuit breaker is a way to invoke remote service via a Proxy in order to deviate the call if needed.
+* For e.g. if the number of consecutive failures crosses a certain threshold, the circuit breaker will stop attempting to invoke remote service and will deviate the calls.
+* After the timeout expires, the circuit breaker will start allowing a limited no. of request to pass through. If those request succeed, the circuit breaker resumes normal operation.The circuit breaker slowly attempts to reintroduce traffic.
+* e.g. Hystrix, JRugged
+
+### Gateway:
+
+* Each microservices has its own set of graphical components, but at the EOD they must be aggregated into a single application.
+* Gateway is the single entry point for all the clients. This allows each client to have a unified interface to all microservices.
+* Gateway can handle request in one of two ways: 
+  - Some requests are simply routed to the appropriate service.
+  - Others can handle cross-cutting concerns like authentication, authorization or determining the location of services via the registry
+* A gateway can also be the ideal place to insert API transalation.
+* e.g. Zuul, Netty, Finagle
+
+### Security:
+
+* Authentication : username & password & Authorization : rules to allow or not allow.
+* SSO(Single sign-on) : authentication protocol - Kerberos, OpenID connect, OAuth 2, SAML
+* IAM : OKTA, KeyCloak, Shiro
+* Access Token : Once authenticated, an access token securely stores information about a user and is then exchanged between services. Each service needs to make sure the token is valid and takes the user information out of it to verify that a user is authorized e.g. JWT (JSON web token).
+* Cookie : You can see the benefit of the gateway as it centralizes user interface calls and access token control.
 
 
 
