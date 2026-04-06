@@ -201,13 +201,26 @@ When scaling demand changes, you can manually scale your resource to a specific 
 ![ManualScaling3](/img/ManualScaling3.JPG "ManualScaling3")
 
 
-## Building and Publishing in Azure App service:
+## Building and Publishing app in Azure App service from Visual studio:
 
 ![Publish1](/img/Publish1.JPG "Publish1")
 
 ![Publish2](/img/Publish2.JPG "Publish2")
 
 ![Publish3](/img/Publish3.JPG "Publish3")
+
+![Publish4](/img/Publish4.JPG "Publish4")
+
+![Publish5](/img/Publish5.JPG "Publish5")
+
+![Publish6](/img/Publish6.JPG "Publish6")
+
+![Publish7](/img/Publish7.JPG "Publish7")
+
+![Publish8](/img/Publish8.JPG "Publish8")
+
+![AzureBlazorWebsite](/img/AzureBlazorWebsite.JPG "AzureBlazorWebsite")
+
 
 
 
