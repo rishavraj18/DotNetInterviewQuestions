@@ -201,3 +201,14 @@ When scaling demand changes, you can manually scale your resource to a specific 
 ![ManualScaling3](/img/ManualScaling3.JPG "ManualScaling3")
 
 
+## Building and Publishing in Azure App service:
+
+![Publish1](/img/Publish1.JPG "Publish1")
+
+![Publish2](/img/Publish2.JPG "Publish2")
+
+![Publish3](/img/Publish3.JPG "Publish3")
+
+
+
+
