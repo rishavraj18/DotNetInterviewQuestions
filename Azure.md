@@ -176,4 +176,28 @@ https://learn.microsoft.com/en-gb/azure/app-service/tutorial-dotnetcore-sqldb-ap
 
 https://learn.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=openid%2Caspnetcore
 
+![Deployment1](/img/Deployment1.JPG "Deployment1")
+
+![Deployment2](/img/Deployment2.JPG "Deployment2")
+
+![Deployment3](/img/Deployment3.JPG "Deployment3")
+
+![Deployment4](/img/Deployment4.JPG "Deployment4")
+
+![SiteSite](/img/Site.JPG "Site")
+
+## App Service Plan:
+
+![AppServicePlan](/img/AppServicePlan.JPG "AppServicePlan")
+
+## Manual Scaling:
+
+When scaling demand changes, you can manually scale your resource to a specific instance count, or via a custom Autoscale rule based policy that scales based on metric(s) thresholds, or schedule instance count which scales during designated time windows. You can also use Automatic Scaling features which enables platform managed scale in and scale out for your apps based on incoming HTTP traffic.
+
+![ManualScaling](/img/ManualScaling.JPG "ManualScaling")
+
+![ManualScaling2](/img/ManualScaling2.JPG "ManualScaling2")
+
+![ManualScaling3](/img/ManualScaling3.JPG "ManualScaling3")
+
 
