@@ -315,6 +315,170 @@ Microservices are created using most popular domain driven design. Sharing datab
 #### II) WE ALSO NEED TO TAKE MICROSERVICES VERSIONING INTO ACCOUNT. E.G. TEST V 1.2 IN STAGING ENV HOWEVER WE HAVE V 1.0 IN PRODUCTION. 
 
 
+### Key Points : 
+
+![Microservices-Components](/img/Microservices-Components.JPG "Microservices-Components")
+
+* DDD is used to subdivide an app into several subdomains.
+* Several team need to be coordinated to get a final product.
+* For that, we need a gateway, so the user interface access the different microservices in a united way.
+* Microservices need to exchange information, it started at database level where information has to be synchronized in an eventual consitency manner.
+* Then database information is communicated to the microservice, which can use synchronous or asynchronous remote method invocation or messaging.
+* To be able to document the APIs, microservices need to expose API contracts, so other microservices know how to invoke them.
+* The gateway is the perfect entry point to deal with cross-cutting concerns such as service registry, Authentication and Authorization.
+* Authorization has to be done by all microservices, passing an access token on each call.
+* Central monitoring to be efficient, microservices need to expose a health check API, write logs and exceptions, measure each call, and corelate each invocation to create a chain.
+* Audit any user activity, and protect the APIs  with rate limiting.
+* Monitoring needs to be automated to generate alerts, depending on the behaviour of the entire system.
+* Containers, Orchestrators and CI/CD help us to deploy all these complexities frequently.
+* MS architecture system will use every network equipment such as firewalls, switches or routers.
+* MS can be scalable based on need, but system should be reliable. 
+* Any SPOF, needs to be duplicated such as the gateway, the monitoring system or service registry.
+
+
+![Challenges](/img/Challenges.JPG "Challenges")
+
+## Techincal Concern:
+
+### Design:
+
+* How to partition the system
+* How small
+* Design is an art
+* Depends on complexity of model
+* Domain driven design
+
+### Technical diversity:
+
+* Appropriate programming languages
+* Best performance
+* Adopt right database
+* Right platform
+* Pickup right tool for the right job
+* Technology agnostic
+
+### User Interface:
+
+* Web right framework
+* Well designed components
+* Great browsing experience
+* Responsive user interface
+* Fits well on several devices
+* Need to integrate all UI together
+* Aggregation can be tricky
+
+### Distribution:
+
+* Communicating over a network
+* Highly distributed
+* Network fallacies
+* Address distributed systems complexity
+* Network failure will occur
+* Deal with failures
+* Circuit breakers
+
+### Data Store:
+
+* One database per subdomain
+* Services are loosely coupled
+* Different style of databases: Relational, No SQL, Time series
+* Keeping data in sync
+* Capture data change
+* Eventual consistency
+* Avoid distributed transactions
+
+### Performance:
+
+* Right language, database, tools - performance benefit
+* Optimize each microservice - benchmark  and performance tuning
+* Improve integration, network slows down
+
+### Security:
+
+* It is NOT easy with large no. of microservices
+* No. of microservices increases, increases the no. of flaws
+* Access token validated across all microservices 
+* DevSecOps / DevOpsSec
+
+### Testing:
+
+* Less code to test
+* Mock
+* Test in isolation
+* Integration testing
+* Complex test environment
+* Some part of testing directly in Prod
+* Chaos testing
+
+### Testing:
+
+* Less code to maintain
+* Less code to understand
+* Focuses on subdomain of your model
+
+### Extensibility:
+
+* Extensible by design
+* New feature, new microservice
+* Access 3rd party, new microservice
+* Give partners access to your system
+
+### Continous Integration / Delivery:
+
+* Deploy, Update, Replace, Scale
+* Independent DURS
+* CI & CD
+* Error are identified
+* Well-automated testing and deployment pipelines
+
+### Portability:
+
+* CI builds container images
+* Image used across the deployment process
+* Image is a snapshot of microservice with dependencies
+* Application is portable
+* Orchestrator is responsible for deploying and scaling container images across infrastructure
+
+### Infrastructure:
+
+* Hybrid infrastructure
+* Traditional IT
+* Private cloud
+* Public clouds
+* Datacenters
+* Right mix 
+
+### Scalability:
+
+* Meet the demand increased usage
+* Application doesn't slow down
+* More users than anticipated
+* Scale out on public cloud
+
+### Availability:
+
+* Ensure a level of operational performance
+* Uptime
+* Available by design
+* If one MS is not available, other MS depend on it enable graceful degradation
+* Critical components must be highly available for e.g. Service Registry, Gateway, IAM
+* Operation complexity
+
+### Monitoring:
+
+* Constantly monitor your system
+  - More logs to aggregate
+  - More heartbeat to control
+  - More metrics to gather
+
+* Alerts to detect the system slowing down
+* External calls and rate limit
+* Possible security issues and fraud
+
+![MSConcern](/img/MSConcern.JPG "MSConcern")
+
+
+
 
 
 
