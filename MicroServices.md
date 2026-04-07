@@ -317,7 +317,7 @@ Microservices are created using most popular domain driven design. Sharing datab
 
 ### Key Points : 
 
-![Microservices-Components](/img/Microservices-Components.JPG "Microservices-Components")
+![Microservices-Components](/img/Microservices-Components.jpg "Microservices-Components")
 
 * DDD is used to subdivide an app into several subdomains.
 * Several team need to be coordinated to get a final product.
