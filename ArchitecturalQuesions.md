@@ -1078,3 +1078,160 @@ Client → Order API (Request-Response)
 ✅ Many downstream consumers
 
 -------------------------------------------------------------
+
+## How another application validates a JWT token ?
+
+JWT validation works by verifying the token’s cryptographic signature using a shared secret or public key, along with validating claims like issuer, audience, and expiration to ensure the token was issued by a trusted authority and hasn’t been tampered with.
+
+### When our API issues a JWT, it doesn’t just create random text — it cryptographically signs the token.
+
+* A JWT has 3 parts: Header.Payload.Signature
+* Header → Algorithm (e.g., HS256, RS256)
+* Payload → Claims (userId, role, exp, iss, aud)
+* Signature → Ensures token integrity & authenticity
+
+### When another application receives the token, it performs these checks:
+
+#### 1) Signature Validation : Was this token really issued by a trusted server?
+
+Two common approaches:
+
+##### Symmetric Key (HS256)
+
+Same secret key is used to:
+
+* Generate token
+* Validate token
+* Issuer → signs with secret key
+* Consumer → validates with same secret key
+
+✔ If signature matches → token is valid
+❌ If someone modifies payload → signature breaks
+
+
+##### Asymmetric Key (RS256) - Recommended for microservices
+
+* Private key → used to sign token
+* Public key → used to validate token
+* Auth Server → signs with PRIVATE key
+* Other Apps → validate using PUBLIC key
+
+✔ No need to share secret
+✔ More secure in distributed systems
+
+#### 2) Expiration Check:
+
+"exp": 1712345678
+
+✔ Token must not be expired
+❌ Expired → rejected
+
+#### 3) Issuer Validation (iss claim)
+
+Ensures token came from trusted authority
+
+```json
+"iss": "https://auth.mycompany.com"
+```
+
+#### 4) Audience Validation
+
+Ensures token is meant for this specific application
+
+```json
+"aud": "my-api"
+```
+
+#### 5) Additional Claims Validation
+
+* sub → user identity
+* role → authorization
+* custom claims → business logic
+
+### What prevents fake tokens?
+
+If an attacker tries to create a token:
+
+❌ They DON’T have:
+* Secret key (HS256)
+* Private key (RS256)
+
+So:
+
+👉 Signature won’t match
+👉 Validation fails
+
+
+### Real-world Flow:
+
+```json
+[Client] → Login → [Auth Server]
+
+Auth Server:
+  → creates JWT
+  → signs it (private/secret key)
+
+Client:
+  → sends JWT to API
+
+API:
+  → validates signature
+  → checks exp, iss, aud
+  → allows access
+```
+
+### Example in .NET (Validation)
+
+```c#
+services.AddAuthentication("Bearer")
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = "https://auth.myapp.com",
+
+        ValidateAudience = true,
+        ValidAudience = "my-api",
+
+        ValidateLifetime = true,
+
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes("your-secret-key"))
+    };
+});
+```
+
+### Best Practices: 
+
+✔ Use RS256 (public/private key) in microservices
+✔ Store keys securely (Azure Key Vault, etc.)
+✔ Always validate:
+
+Signature
+Expiry
+Issuer
+Audience
+
+✔ Use short-lived tokens + refresh tokens
+
+### JWT + Refresh Token flow
+
+JWT + Refresh Token flow is the backbone of secure authentication in modern apps (especially React + .NET + APIs).
+
+### Why do we need Refresh Tokens?
+
+#### JWT access tokens are:
+
+✅ Stateless
+❌ Cannot be revoked easily
+❌ Risky if long-lived
+
+So we make them short-lived (e.g., 15 min)
+
+#### How does user stay logged in without logging in again?
+Answer: Refresh Token
+
+
+
