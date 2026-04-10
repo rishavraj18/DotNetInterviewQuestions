@@ -477,6 +477,23 @@ Microservices are created using most popular domain driven design. Sharing datab
 
 ![MSConcern](/img/MSConcern.JPG "MSConcern")
 
+------------------------------------------------------------------------------------------------------------------------------------
+
+## Advantages of Microservice application:
+
+* Flexible scaling
+* Deploy independently - Continuous delivery
+* Separated teams for each microservice
+* Easy to expand
+* Reliable
+* Application consisting of small services makes development and maintenance easy
+* Independent services
+
+## Developing microservices:
+
+
+
+
 
 
 
