@@ -221,6 +221,63 @@ When scaling demand changes, you can manually scale your resource to a specific 
 
 ![AzureBlazorWebsite](/img/AzureBlazorWebsite.JPG "AzureBlazorWebsite")
 
+### NOTE: We can directly publish app from Visual studio to app service easily. If we want to publish an app from Visual studio to Azure, we need FTP service configuration.
+
+## Deployment Slots:
+
+* It is not enabled under Basic App service plan. To enable it we need to upgrade the plan from Basic to Premium. 
+* It allows us to deploy the code into web app without overriding Prod code.
+* We end up with 2 different websites and we can test before overriding production.
+
+![DeploymentSlot1](/img/DeploymentSlot1.JPG "DeploymentSlot1")
+
+![DeploymentSlot2](/img/DeploymentSlot2.JPG "DeploymentSlot2")
+
+* While we compare performance wise, Premium v3 P0V3 has 95% better performance as compare to Basic B1 plan.
+
+![Basic_Premium_Performance](/img/Basic_Premium_Performance.JPG "Basic_Premium_Performance")
+
+![UpdatedPlan](/img/UpdatedPlan.JPG "UpdatedPlan")
+
+![DeploymentSlot3](/img/DeploymentSlot3.JPG "DeploymentSlot3")
+
+![DeploymentSlot4](/img/DeploymentSlot4.JPG "DeploymentSlot4")
+
+![DeploymentSlot5](/img/DeploymentSlot5.JPG "DeploymentSlot5")
+
+![DeploymentSlot6](/img/DeploymentSlot6.JPG "DeploymentSlot6")
+
+![DeploymentSlot7](/img/DeploymentSlot7.JPG "DeploymentSlot7")
+
+![DeploymentSlot8](/img/DeploymentSlot8.JPG "DeploymentSlot8")
+
+![DeploymentSlot9](/img/DeploymentSlot9.JPG "DeploymentSlot9")
+
+![DeploymentSlot10](/img/DeploymentSlot10.JPG "DeploymentSlot10")
+
+* It is not an additional app service, we can create 'n' no. of services. It only charges for preimum app service plan.
+
+![DeploymentSlot_Staging_Prod](/img/DeploymentSlot_Staging_Prod.JPG "DeploymentSlot_Staging_Prod")
+
+* We can perform A/B testing, with the production app using Traffic %
+
+* ARRAffinity - same browser is gonna go to the same instance, if at all possible. It is beacuse of SessionAffinity is enabled in app service.
+
+![ARRAffinity](/img/ARRAffinity.JPG "ARRAffinity")
+
+![SessionAffinity](/img/SessionAffinity.JPG "SessionAffinity")
+
+* Staging becomes Prod and Prod becomes sataging using Swap. Name won't be swap, just the code will get.
+
+![Swap_Staging_Prod](/img/Swap_Staging_Prod.JPG "Swap_Staging_Prod")
+
+
+
+
+
+
+
+
 
 
 
