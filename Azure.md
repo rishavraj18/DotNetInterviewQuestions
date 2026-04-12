@@ -271,6 +271,60 @@ When scaling demand changes, you can manually scale your resource to a specific 
 
 ![Swap_Staging_Prod](/img/Swap_Staging_Prod.JPG "Swap_Staging_Prod")
 
+* Secrets and critical configuration values should be stored in Environment variables app setting / connectionstring.
+
+![EnvironmentVariables](/img/EnvironmentVariables.JPG "EnvironmentVariables")
+
+* App domain can be setup for existing domain or can buy a new doamin in Azure.
+
+![AppServiceDomain](/img/AppServiceDomain.JPG "AppServiceDomain")
+
+## AutoScaling App Services:
+
+* Enabling AutoScaling automatically adjust the resources based on demand. This allows us to run our app with a minimal amount of resouces which helps us in cost reduction without impacting the fullfillment.
+* Makes a great balance in performance and cost saving.
+
+### Scale Up:
+
+* Increases size and power of server
+* Fewer traffic
+* Manual or Script based
+
+
+![ScaleUp](/img/ScaleUp.JPG "ScaleUp")
+
+### Scale Out:
+
+* Adding more servers
+* More traffic
+* Automatic and based on rule
+
+![ScaleOut](/img/ScaleOut.JPG "ScaleOut")
+
+### Diagnostics Log:
+
+* In AutoScaling setting, diagnostic settings keep a track when an instance is added or removed based on network load.
+
+* Diagnostics Log will get enabled when Autoscaling setting is enabled:
+
+![AutoScaleSetting](/img/AutoScaleSetting.JPG "AutoScaleSetting")
+
+#### Diagnostic Setting:
+
+Enable Log analytics as well.
+
+![DiagnosticSetting](/img/DiagnosticSetting.JPG "DiagnosticSetting")
+
+### Application Insights:
+
+Application Insights for App Services is auto telemtry method to track app activity without any code changes.
+
+
+
+
+
+
+
 
 
 
