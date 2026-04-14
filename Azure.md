@@ -319,6 +319,11 @@ Enable Log analytics as well.
 
 Application Insights for App Services is auto telemtry method to track app activity without any code changes.
 
+![DiagnosticSetting2](/img/DiagnosticSetting2.JPG "DiagnosticSetting2")
+
+![DiagnosticSetting3](/img/DiagnosticSetting3.JPG "DiagnosticSetting3")
+
+![DiagnosticSetting4](/img/DiagnosticSetting4.JPG "DiagnosticSetting4")
 
 
 
