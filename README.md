@@ -326,7 +326,7 @@ public class UsersController : ControllerBase
 }
 ```
 
-*Step 5: ADependency Injection (Program.cs)*
+*Step 5: Dependency Injection (Program.cs)*
 
 ```csharp
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -1503,32 +1503,32 @@ Dispose scoped and transient disposables
 
 ## Service lifetimes – Transient, Scoped, Singleton
 
-A) Transient
-Creates a new instance every time
-Light-weight, stateless services
-Helper classes, utilities, Formatter, validators
+### A) Transient
+* Creates a new instance every time
+* Light-weight, stateless services
+* Helper classes, utilities, Formatter, validators
 
-B)Scoped
-one instance per HTTP request
-Same instance reused within the same request, New request = new instance
-DbContext, Unit of Work pattern, Business logic that must stay consistent during one request
+### B)Scoped
+* one instance per HTTP request
+* Same instance reused within the same request, New request = new instance
+* DbContext, Unit of Work pattern, Business logic that must stay consistent during one request
 
-Inside Request #1:
-Controller: instance A
-Service A: instance A
-Repository: instance A
+#### Inside Request #1:
+* Controller: instance A
+* Service A: instance A
+* Repository: instance A
 
-Inside Request #2:
-New instance B
+#### Inside Request #2:
+* New instance B
 
-C) Singleton
-Only one instance in the entire application lifetime
-Created once, reused forever
-Same instance for all requests & all users
-Cache services, Logging frameworks, Configuration providers
+### C) Singleton
+* Only one instance in the entire application lifetime
+* Created once, reused forever
+* Same instance for all requests & all users
+* Cache services, Logging frameworks, Configuration providers
 
-Only singleton/transient services are injected into middleware.
-Scoped services are not allowed
+* Only singleton/transient services are injected into middleware.
+* Scoped services are not allowed
 
 
 | Lifetime      | Where Stored         | Created When                  | Disposed When                |
@@ -1560,6 +1560,76 @@ Scoped services are not allowed
 * Better Extensibility
 * Centralized Dependency Management
 * Promotes SOLID Principles
+
+
+-------------------------------------------------------------
+## Ways to Inject Dependencies:
+
+### 1) Constructor Injection ✅ (Recommended)
+
+```csharp
+public class UserController
+{
+    private readonly IUserService _service;
+
+    public UserController(IUserService service)
+    {
+        _service = service;
+    }
+}
+```
+
+#### Why best:
+* Explicit dependencies
+* Easy to test
+* Immutable dependencies
+
+
+### 2) Method Injection
+
+Dependency passed into a method.
+
+```csharp
+public void Process(IEmailService emailService)
+{
+}
+```
+
+#### Use for:
+* Rare/optional dependencies
+* One-time operations
+
+### 3) Property Injection
+
+* Dependency set through property.
+
+```csharp
+public IEmailService EmailService { get; set; }
+```
+
+#### Use cautiously:
+
+* Less preferred because dependency may be missing.
+
+### 4) E.g.
+
+```csharp
+services.AddDbContext<AppDbContext>();
+services.AddHttpClient<IMyApi, MyApi>();
+services.AddSingleton<IMemoryCache, MemoryCache>();
+```
+
+✅ Do
+* Prefer constructor injection
+* Use scoped for request-based services
+* Use singleton for shared stateless services
+* Keep services focused
+
+❌ Don’t
+* Inject scoped service into singleton directly
+* Put state in singleton unless thread-safe
+* Overuse service locator pattern
+* Use property injection as default
 
 -------------------------------------------------------------
 
