@@ -1,16 +1,22 @@
-# API
+﻿# API
 
 ## API History:
 
 ![API History](/img/APIHistory.JPG "API History")
 
+-------------------------------------------------------------
+
 ## HTTP Request:
 
 ![Http Request](/img/HttpRequest1.JPG "Http Request")
 
+-------------------------------------------------------------
+
 ### E.g
 
 ![Http Request](/img/HttpRequest2.JPG "Http Request")
+
+-------------------------------------------------------------
 
 ### Request Deconstructed:
 
@@ -75,6 +81,8 @@
 * HTML, CSS, JavaScript, XML, JSON
 * Binary and blobs common (e.g. jpg)
 * APIs often have their own types
+
+-------------------------------------------------------------
 
 ## Sample code
 
@@ -183,6 +191,8 @@ Foo bar
 HTTP/1.1 400 Bad Request
 ```
 
+-------------------------------------------------------------
+
 ## REST:
 
 * Represenatational state transfer
@@ -199,6 +209,8 @@ HTTP/1.1 400 Bad Request
 a) Structure architecture style<br/>
 b) They need to be productive
 
+ -------------------------------------------------------------
+
 ## Designing RESTful web APIs:
 
 * Design first
@@ -208,6 +220,8 @@ b) They need to be productive
 * Idempotency
 * Designing results
 * Formatting results
+
+-------------------------------------------------------------
 
 ### Design your API first
 
@@ -388,6 +402,8 @@ HTTP/1.1 412 Preconditioned Failed
 * Firebase
 * Socket.IO
 
+-------------------------------------------------------------
+
 #### Versioning your API:
 
 <br/>Should you version your API ?
@@ -486,6 +502,8 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 
 - Requires a lot more development maturity to create and maintain
 
+-------------------------------------------------------------
+
 #### Locking down your API:
 
 - APIs and security
@@ -506,6 +524,8 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 - API is public or private : Public - should allow, Private - consider for partners
 - CORS (Cross-origin resource sharing) : allows control, domain/resource/verb control, only limits browser and not app
 
+-------------------------------------------------------------
+
 #### How does CORS work ?
 
 <br/>Cross-Origing Request -> Browser Requests Access
@@ -520,6 +540,7 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 
 ![CORS3](/img/CORS3.JPG "CORS3")
 
+-------------------------------------------------------------
 
 #### Authentication vs Authorization:
 
@@ -527,12 +548,16 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 
 ![AuthenticationTypes](/img/AuthenticationTypes.JPG "AuthenticationTypes")
 
+-------------------------------------------------------------
+
 #### Cookies
 
 * Cookies are easy and common
 * Subject to request forgery
 * Depends on your security needs
 * Banks and Pizza app are not equal
+
+-------------------------------------------------------------
 
 #### Basic Auth
 
@@ -542,6 +567,8 @@ Content-Type: application/vnd.yourapp.camp.v1+json
     - Sends credentials on every request
     - Increase surface area of attacks
 
+-------------------------------------------------------------
+
 #### Token based Auth
 
 * Typical for APIs - mix of secure and simplicity
@@ -550,6 +577,8 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 
 ![TokenAuthentication](/img/TokenAuthentication.JPG "TokenAuthentication")
 
+-------------------------------------------------------------
+
 #### JWTs (JSON Web Tokens):
 
 * Industry standard
@@ -557,6 +586,8 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 * User information, Claims, Validation signature, other information
 
 ![JWTAnatomy](/img/JWTAnatomy.JPG "JWTAnatomy")
+
+-------------------------------------------------------------
 
 #### OAuth:
 
@@ -567,3 +598,233 @@ Content-Type: application/vnd.yourapp.camp.v1+json
 * Safer for user
 
 ![OAuth](/img/OAuth.JPG "OAuth")
+
+ -------------------------------------------------------------
+
+## Explain FromBody, FromUri, and FromQuery control where model binding gets values from in an HTTP request ?
+
+* FromBody binds data from request payload (JSON), suitable for POST/PUT complex objects.
+* FromQuery binds data from URL query string, suitable for GET filters, pagination, search.
+
+### FromBody
+
+* Read data from the HTTP request body (usually JSON/XML).
+* Used when sending complex data like objects.
+
+```csharp
+[HttpPost]
+public IActionResult CreateUser([FromBody] UserDto user)
+{
+    return Ok(user);
+}
+
+Eg. Request body
+{
+  "name": "Rishav",
+  "age": 25
+}
+
+```
+
+### FromQuery
+
+* Read values from the query string in URL.
+* Used for filters, pagination, searching.
+
+
+```csharp
+[HttpGet]
+public IActionResult GetUsers([FromQuery] int page, [FromQuery] string search)
+{
+    return Ok();
+}
+
+e.g. URL:
+
+GET /api/users?page=1&search=admin
+```
+
+* FromUri is replaced by: FromQuery, FromRoute
+
+### DO's and DONT's:
+
+#### 1) Use FromBody When:
+
+* Sending Complex Objects
+
+```csharp
+POST /api/users
+{
+  "name": "Rishav",
+  "email": "abc@test.com"
+}
+```
+
+* Create / Update APIs
+
+POST, PUT, PATCH<br/>
+
+* Nested Models
+
+```csharp
+{
+  "name": "Order1",
+  "items": [{ "id":1 }]
+}
+```
+
+#### 2) Don't Use FromBody For
+
+* GET Requests
+
+```csharp
+[HttpGet]
+Get([FromBody] UserDto dto) // Bad Practice
+```
+
+Reasons:<br/>
+GET should be cacheable<br/>
+Many clients ignore GET body<br/>
+Unexpected behavior<br/>
+
+* Multiple [FromBody] Parameters
+
+```csharp
+Post([FromBody] User u, [FromBody] Address a) // Invalid
+```
+
+Only one body parameter allowed because request body can be read once. Instead use below:<br/>
+
+```csharp
+public class RequestDto
+{
+    public User User { get; set; }
+    public Address Address { get; set; }
+}
+```
+
+#### 3) Use FromQuery When
+
+* Filtering / Searching
+
+```csharp
+GET /products?category=mobile&price=1000
+```
+
+* Pagination
+
+```csharp
+GET /users?page=2&pageSize=20
+```
+
+* Sorting
+
+```csharp
+GET /users?sortBy=name&desc=true
+```
+
+#### 3) Don't Use FromQuery For
+
+
+* Large Complex Payloads
+
+```html
+GET /users?name=abc&address.city=x&address.pin=123... // Use body instead.
+```
+
+* Sensitive Data
+
+```html
+GET /login?password=123456 // Use POST body instead.
+```
+
+Logged in browser history
+Server logs
+Security risk
+
+
+#### 4) Use FromRoute (ASP.NET Core)
+
+For IDs/resources in URL path.
+
+[HttpGet("{id}")]
+public IActionResult GetById([FromRoute] int id)
+
+```html
+GET /api/users/5
+```
+
+#### 5) Real API Design Rules
+
+| Scenario       | Use                  |
+| -------------- | -------------------- |
+| Get user by id | FromRoute            |
+| Search users   | FromQuery            |
+| Pagination     | FromQuery            |
+| Create user    | FromBody             |
+| Update user    | FromBody + FromRoute |
+| Delete user    | FromRoute            |
+| Login          | FromBody             |
+
+
+```csharp
+[HttpPut("{id}")]
+public IActionResult Update(
+    [FromRoute] int id,
+    [FromBody] UpdateUserDto dto,
+    [FromQuery] bool notify = false)
+{
+    return Ok();
+}
+```
+
+```html
+PUT /api/users/5?notify=true
+```
+
+```html
+{
+  "name":"New Name"
+}
+```
+
+#### 6) Hidden Auto Binding in ASP.NET Core
+
+If [ApiController] is enabled:
+
+* Complex type → Body automatically
+* Simple type → Query/Route automatically
+* dto binds from body automatically.
+* Still, explicit attributes improve readability.
+
+```csharp
+public IActionResult Save(UserDto dto)
+```
+
+Best Practices
+
+✅ Do
+
+✔ Keep URLs clean
+✔ Use query for optional filters
+✔ Use route for identity
+✔ Use body for data models
+✔ Validate models using ModelState / FluentValidation
+✔ Use DTOs not entity models
+
+❌ Don’t
+
+✘ Put passwords in query string
+✘ Use body in GET
+✘ Send huge query strings
+✘ Use multiple FromBody params
+✘ Mix unclear binding sources
+
+
+In short,
+
+* If user can bookmark/share URL → Query/Route
+* If sending data to server → Body
+
+
+ -------------------------------------------------------------
