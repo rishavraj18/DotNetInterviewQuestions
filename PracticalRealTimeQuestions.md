@@ -1050,3 +1050,361 @@ public class UserService
 | Can SOLID increase complexity?                         | Yes, if overused |
 
 --------------------------------------------------------------------------------------------------------------------------
+
+## How to secure Asp.Net core application: (****Add more***)
+
+### 1)  Man-in-the-middle attacks (MITM) and downgrade attacks -> UseHsts();
+
+ Enable HTTP Strict Transport Security (HSTS).<br/>
+ All future attempts to access HTTP are automatically converted to HTTPS inside the browser, without hitting your server.
+ 
+### 2) Cross-Site Request Forgery (CSRF) 
+
+Tricking a logged-in user to perform actions unknowingly<br/>
+
+#### When a form is rendered:
+
+<br/>ASP.NET Core generates:
+
+* A cookie token → stored in the browser
+* A request token → stored in a hidden field inside the form
+* Example : User logged into bank, Visits malicious site, Hidden form submits transfer request
+* Impact : Unauthorized actions
+* Prevention : Anti-forgery tokens, SameSite cookies, Authorization checks, APIs usually use JWT instead of cookies, so CSRF risk is lower
+
+```csharp
+<form method="post">
+    @Html.AntiForgeryToken()
+    <button type="submit">Submit</button>
+</form>
+```
+
+```csharp
+[ValidateAntiForgeryToken]
+public IActionResult Submit(MyModel model)
+{
+    // Your logic
+}
+```
+
+### 3)  SQL Injection
+
+* Attacker injects malicious SQL into input fields to manipulate the database e.g. ' OR 1=1 --
+* Impact: Data leakage, Authentication bypass, Data deletion
+* Prevention: Parameterized queries, ORM (EF Core), WAF SQL injection rules, Input validation, Never use string concatenation for SQL
+
+```csharp
+context.Users
+    .Where(u => u.Email == email); // Safe (parameterized)
+```
+
+*Stored procedure is dicussed below*
+
+### 4)  XSS (Cross-Site Scripting)
+
+* Injecting malicious JavaScript into web pages
+* Types : Stored XSS, Reflected XSS, DOM-based XSS
+* Impact : Session hijacking, Cookie theft, Account takeover
+* Prevention : Output encoding, Content Security Policy (CSP), WAF XSS filters
+
+e.g. Razor automatically HTML-encodes output
+
+
+### 5) Path Traversal
+
+* Accessing files outside intended directories
+* Impact : Sensitive file access, Config leakage
+* Prevention : Never accept raw file paths e.g NAS only with required service account
+* WAF path traversal rules
+
+```csharp
+
+CDN / WAF
+ ├─ Blocks SQLi, XSS, Path Traversal
+ ├─ Rate limits malicious payloads
+ ├─ Signature + behavioral rules
+ |
+ASP.NET Core
+ ├─ Validation
+ ├─ Authentication & Authorization
+ ├─ Secure coding practices
+ |
+Database
+ ├─ Least privilege
+ ├─ Read/write separation
+
+ ```
+
+ ### 6) CORS
+
+ ### 7) ORM framework
+
+
+ --------------------------------------------------------------------------------------------------------------------------
+
+## What is the benefit of code first approach in EF core?
+
+The main benefit of Code First in EF Core is that developers define entities in C# and manage database changes through migrations. It improves productivity, type safety, maintainability, version control, and works well for modern agile development.
+
+```flow
+Create C# Model
+   ↓
+Add DbContext
+   ↓
+Create Migration
+   ↓
+Update Database
+   ↓
+App Uses Database
+```
+
+### Easier to align with Domain-Driven Design (DDD)
+
+### Migrations = Controlled Schema Changes
+
+```bash
+dotnet ef migrations add AddEmailToCustomer
+dotnet ef database update
+```
+
+### Faster Development
+
+* Developers can create models and database quickly without waiting for DBA scripts in early stages.
+
+### Easy Refactoring
+
+* Need to rename a property or split an entity? Update code + migration.
+
+### Great for CI/CD
+
+* Migrations can run in pipelines during deployment.
+* Automated database updates
+* Consistent environments
+* Dev/Test/Prod alignment
+
+### Use Code First when:
+
+* Building a new application
+* Developers own schema changes
+* Agile iterations happen often
+* You want version-controlled DB evolution
+
+### Database First may be better when:
+
+* Large existing legacy database already exists
+* DBA team fully controls schema
+* Complex stored-procedure-heavy system
+* Shared database used by many systems
+
+ --------------------------------------------------------------------------------------------------------------------------
+
+## Microservices benefits over monoliths
+
+### 1) Independent Deployment:
+
+Each service can be released separately. e.g. Deploy only Payment service without redeploying Orders.
+
+#### Benefits:
+* Faster releases
+* Lower deployment risk
+* Smaller change scope
+
+### 2) Independent Scaling
+
+Scale only the busy service. e.g. Product Search gets heavy traffic, scale Search service heavily.
+
+#### Benefits:
+* Better cost efficiency
+* Better performance under load
+
+### 3) Better Fault Isolation
+
+Failure in one service may not crash entire system. e.g. Notification service fails, checkout still works.
+
+#### Benefits:
+* Higher resilience
+* Lower Downtime
+
+### 4) Team Autonomy
+
+Different teams can own different services.
+
+#### Example:
+* Team A → Orders
+* Team B → Identity
+* Team C → Billing
+
+
+#### Benefits:
+* Parallel development
+* Less coordination bottleneck
+
+### 5) Technology Flexibility
+
+Different services can use different stacks when justified.
+
+#### Example:
+* Orders → .NET
+* Analytics → Python
+* Realtime chat → Node.js
+
+#### Benefits:
+* Use best tool for each problem.
+
+### 6) Easier Large-System Maintenance
+
+Smaller codebases are easier to understand than one giant application.
+
+#### Benefits:
+* Cleaner boundaries
+* Easier onboarding
+* Lower cognitive load
+
+### 7) Strong Domain Boundaries
+
+Microservices align well with business capabilities.
+
+#### Example:
+* Customer Service
+* Loan Service
+* Payment Service
+* Notification Service
+
+#### Benefits:
+* Encourages better design using bounded contexts.
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Microservices Challenges:
+
+* Distributed transactions
+* Network failures
+* Service discovery
+* API versioning
+* Observability
+* DevOps maturity
+* Security between services
+* Data consistency
+* More infrastructure cost
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Custom Middleware:
+
+```flow
+Request → Middleware 1 → Middleware 2 → Controller → Response
+```
+* In ASP.NET Core, middleware is a component in the HTTP pipeline that can inspect, modify, allow, block, or pass requests/responses to the next component.
+* To create custom middleware in ASP.NET Core, create a class with a constructor accepting RequestDelegate, implement InvokeAsync(HttpContext context), add custom logic, call _next(context), and register it using app.UseMiddleware<T>().
+
+### Step 1: Create Custom Middleware Class
+
+```C#
+public class RequestLoggingMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger<RequestLoggingMiddleware> _logger;
+
+    public RequestLoggingMiddleware(
+        RequestDelegate next,
+        ILogger<RequestLoggingMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        _logger.LogInformation("Incoming Request: {Method} {Path}",
+            context.Request.Method,
+            context.Request.Path);
+
+        await _next(context); // call next middleware
+
+        _logger.LogInformation("Outgoing Response: {StatusCode}",
+            context.Response.StatusCode);
+    }
+}
+```
+
+### Step 2: Cleaner Extension Method (Recommended)
+
+```C#
+public static class MiddlewareExtensions
+{
+    public static IApplicationBuilder UseRequestLogging(
+        this IApplicationBuilder app)
+    {
+        return app.UseMiddleware<RequestLoggingMiddleware>();
+    }
+}
+```
+
+### Step 3: Register Middleware in Program.cs
+
+```C#
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.UseRequestLogging(); // With extension method
+// app.UseMiddleware<RequestLoggingMiddleware>();  // Without extension method
+
+app.MapControllers();
+
+app.Run();
+```
+
+### Real Production Middleware Example Ideas
+
+#### 1) Correlation ID
+
+Add request trace id.
+
+#### 2) Global Exception Handler
+
+Catch all unhandled exceptions.
+
+#### 3) Security Headers
+
+Add: X-Frame-Options, Content-Security-Policy
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Explain Request Flow in dotnet core application?
+
+```Request flow
+
+Client                  (Client Sends HTTP Request)
+  ↓                     (Sent over network to our server)
+Kestrel                 (Accepts incoming connections & Converts raw network data into HttpContext)
+  ↓
+HttpContext Created     (For each request, .NET creates an HttpContext)
+  ↓
+Middleware Pipeline     (The request enters middleware one by one in order configured in Program.cs & Dependency Injection Resolves Services)
+  ↓
+Routing                 
+  ↓
+Controller              (When route matches, controller action runs)
+  ↓
+Service Layer           (Controller usually calls service layer)
+  ↓
+Repository              (_context.Customers.Find(id); => SQL generated and sent to database)
+  ↓
+Database                (SELECT * FROM Customers WHERE Id = 10 => Database returns result)
+  ↓
+Data Returned
+  ↓
+JSON Serialization      (Object converted to JSON using System.Text.Json)
+  ↓
+Middleware Response Flow (Response Travels Back Through Middleware)
+  ↓
+Kestrel                  (Final response sent over network to browser/Postman/mobile)
+  ↓
+Client Receives Response
+
+{
+  "id":10,
+  "name":"Rishav"
+}
+
+```
