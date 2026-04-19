@@ -272,7 +272,7 @@ MIS (Management Information System) reporting services and dashboards aggregate 
 
 ## 4) End-to-End Flow:
 
-![HomeLoanArchitecture](/img/HomeLoanArchitecture.PNG "HomeLoanArchitecture")
+![HomeLoanArchitecture](/img/HomeLoanArchitecture.JPG "HomeLoanArchitecture")
 
 ### Step 1: Customer Login
 
