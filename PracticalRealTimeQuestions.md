@@ -480,3 +480,573 @@ Because banking modules change independently:
 
 --------------------------------------------------------------------------------------------------------------------------
 
+## What is Dependency Injection in .NET Core? How does DI work internally?
+
+ASP.NET Core has a built-in DI container with three lifetimes: Transient, Scoped, Singleton.
+
+* Register services (what types exist and their lifetimes).
+* Build a dependency graph (resolve constructor parameters).
+* Create instances (construct objects in the correct order).
+
+When Registering:
+* Store metadata (type → implementation → lifetime)
+
+When Resolving:
+* Lookup descriptor
+* Find constructor
+* Resolve dependencies recursively
+* Construct object (using cached delegates)
+* Cache it if singleton/scoped
+* Track if disposable
+
+On Scope End:
+* Dispose scoped and transient disposables
+
+
+## Service lifetimes – Transient, Scoped, Singleton
+
+### A) Transient
+* Creates a new instance every time
+* Light-weight, stateless services
+* Helper classes, utilities, Formatter, validators
+
+### B)Scoped
+* one instance per HTTP request
+* Same instance reused within the same request, New request = new instance
+* DbContext, Unit of Work pattern, Business logic that must stay consistent during one request
+
+#### Inside Request #1:
+* Controller: instance A
+* Service A: instance A
+* Repository: instance A
+
+#### Inside Request #2:
+* New instance B
+
+### C) Singleton
+* Only one instance in the entire application lifetime
+* Created once, reused forever
+* Same instance for all requests & all users
+* Cache services, Logging frameworks, Configuration providers
+
+* Only singleton/transient services are injected into middleware.
+* Scoped services are not allowed
+
+
+| Lifetime      | Where Stored         | Created When                  | Disposed When                |
+| ------------- | -------------------- | ----------------------------- | ---------------------------- |
+| **Transient** | not stored           | every request for the service | end of scope (if disposable) |
+| **Scoped**    | request scope cache  | first request within scope    | end of request               |
+| **Singleton** | root container cache | once at app startup           | app shutdown                 |
+
+
+✔ If it holds global shared state → Singleton
+
+(e.g., memory cache, configuration, system-wide services)
+
+✔ If it works on a specific request → Scoped
+
+(e.g., DbContext, request trackers, user services)
+
+✔ If it’s stateless and lightweight → Transient
+
+(e.g., helpers, utilities, mappers)
+
+## What are the key advantages of Dependency Injection (DI)
+
+* Loose Coupling, modularity, testability, maintainability, and flexibility
+* Easy Unit Testing (Mocking becomes simple)
+* Clean Code
+* Better Extensibility
+* Centralized Dependency Management
+* Promotes SOLID Principles
+
+
+## Ways to Inject Dependencies:
+
+### 1) Constructor Injection ✅ (Recommended)
+
+```csharp
+public class UserController
+{
+    private readonly IUserService _service;
+
+    public UserController(IUserService service)
+    {
+        _service = service;
+    }
+}
+```
+
+#### Why best:
+* Explicit dependencies
+* Easy to test
+* Immutable dependencies
+
+
+### 2) Method Injection
+
+Dependency passed into a method.
+
+```csharp
+public void Process(IEmailService emailService)
+{
+}
+```
+
+#### Use for:
+* Rare/optional dependencies
+* One-time operations
+
+### 3) Property Injection
+
+* Dependency set through property.
+
+```csharp
+public IEmailService EmailService { get; set; }
+```
+
+#### Use cautiously:
+
+* Less preferred because dependency may be missing.
+
+### 4) E.g.
+
+```csharp
+services.AddDbContext<AppDbContext>();
+services.AddHttpClient<IMyApi, MyApi>();
+services.AddSingleton<IMemoryCache, MemoryCache>();
+```
+
+✅ Do
+* Prefer constructor injection
+* Use scoped for request-based services
+* Use singleton for shared stateless services
+* Keep services focused
+
+❌ Don’t
+* Inject scoped service into singleton directly
+* Put state in singleton unless thread-safe
+* Overuse service locator pattern
+* Use property injection as default
+
+
+## .Net 8 onwards
+
+* When multiple Implementations of Same Interface
+* Earlier: Used factory pattern for multiple implementations.
+* Now: Use Keyed Services directly.
+
+```csharp
+builder.Services.AddScoped<ILoanService, LoanService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
+
+builder.Services.AddKeyedScoped<INotificationService, SmsNotification>("sms");
+builder.Services.AddKeyedScoped<INotificationService, EmailNotification>("email");
+```
+
+```csharp
+public class LoanController(
+    ILoanService loanService,
+    [FromKeyedServices("sms")] INotificationService notifier)
+{
+}
+```
+
+### Older dotnet version (Factory way):
+
+* Manual logic
+* Harder to test
+* Violates Open/Closed Principle
+
+```csharp
+public IPaymentService Get(string type)
+{
+   return type switch
+   {
+      "upi" => new UpiPayment(),
+      "card" => new CardPayment()
+   };
+}
+```
+--------------------------------------------------------------------------------------------------------------------------
+
+## What are the design pattern automatically getting implemented by modern .net core package ?
+
+| Feature           | Pattern                    |
+| ----------------- | -------------------------- |
+| DI Container      | Dependency Injection / IoC |
+| Middleware        | Chain of Responsibility    |
+| Logging           | Factory                    |
+| HttpClientFactory | Factory + Policy           |
+| EF Core           | Repository + Unit of Work  |
+| Filters           | Decorator                  |
+| Events            | Observer                   |
+| Hosted Services   | Template Method            |
+| Minimal APIs      | Builder                    |
+
+
+### 1. Dependency Injection (DI) → Inversion of Control Pattern
+
+<br/>Built into ASP.NET Core by default.
+
+#### Where it happens:
+
+* builder.Services.AddScoped<>();
+* Constructor injection in controllers/services
+
+#### Benefits:
+
+* Loose coupling
+* Easy unit testing
+
+### 2. Middleware Pipeline → Chain of Responsibility
+
+Request flows through multiple middleware components.
+
+#### e.g. 
+
+```csharp
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseExceptionHandler();
+```
+
+#### Benefits:
+
+* Flexible request pipeline
+* Plug-and-play behavior
+
+### 3. Logging → Factory Pattern
+
+The logging system creates logger instances dynamically. Internally uses ILoggerFactory.
+
+```csharp
+ILogger<MyService> logger;
+```
+#### Benefits:
+
+* Abstracts logging providers (Serilog, NLog, etc.)
+
+### 4. Configuration → Options Pattern
+
+Strongly-typed configuration binding.
+
+```csharp
+services.Configure<MySettings>(config.GetSection("MySettings"));
+```
+
+#### Pattern:
+
+* Options Pattern (specialized pattern)
+* Uses Singleton + Factory
+
+#### Benefits:
+Centralized configuration management
+
+### 5. HttpClient → Factory + Resilience (Policy Pattern)
+
+Using IHttpClientFactory
+
+```csharp
+services.AddHttpClient();
+```
+
+#### Pattern:
+* Factory Pattern
+* Policy Pattern (via Polly)
+
+#### Benefits:
+
+Retry, circuit breaker, timeout handling
+
+### 6. Entity Framework Core → Multiple Patterns
+
+#### Patterns used:
+
+* Repository Pattern
+* Unit of Work
+* Change Tracking (Observer-like)
+
+```csharp
+DbContext.SaveChanges();
+```
+
+#### Benefits:
+
+* Manages transactions automatically
+* Tracks entity changes
+
+### 7.  Filters → Decorator Pattern
+
+Filters wrap around request execution.
+
+```csharp
+[Authorize]
+[ActionFilter]
+```
+
+#### Benefits:
+
+Add behavior without modifying core logic
+
+### 8.  Minimal APIs → Builder Pattern
+
+Fluent configuration style
+
+```csharp
+var app = builder.Build();
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## SOLID Principle
+
+### 1) Single Responsibility Principle (SRP)
+
+A class should have only one responsibility.
+
+#### Violation Smell:
+
+One class does business logic + DB + logging + email
+
+#### Bad Eg.
+
+```csharp
+public class OrderService
+{
+    public void CreateOrder() { }
+    public void SaveToDb() { }
+    public void SendEmail() { }
+}
+```
+
+#### Good Fix
+
+```csharp
+public class OrderService { }
+public class OrderRepository { SaveToDb() }
+public class EmailService { }
+```
+
+### 2) Open / Closed Principle (OCP)
+
+A Class should be open for extension and closed for modification. Adding a new feature should not require touching tested code.
+
+#### Violation Smell:
+
+* if / else
+* switch
+* string-based type checks
+
+#### Bad Eg.
+
+```csharp
+if(type == "VIP") { }
+else if(type == "Regular") { }
+```
+
+#### Good Fix (Strategy Pattern)
+
+```csharp
+public interface IDiscountStrategy
+{
+    double Apply(double amount);
+}
+
+public class VipDiscount : IDiscountStrategy
+{
+    public double Apply(double amount) => amount * 0.8;
+}
+```
+
+### 3) Liskov Substitution Principle (LSP)
+
+* Subtypes must be replaceable for their base types without breaking behavior. 
+* LSP is violated when a subclass removes or weakens behavior promised by the base class.
+* In banking systems, this often happens when fixed deposits or savings accounts are forced into a common withdrawable hierarchy.
+
+#### Violation Smell:
+
+* Overriding behavior to throw exceptions
+* Breaking assumptions of base class
+* Base class contract is broken
+ 
+#### Bad Eg.
+
+```csharp
+public class BankAccount
+{
+    public virtual void Withdraw(decimal amount)
+    {
+        Console.WriteLine($"Withdrawing {amount}");
+    }
+}
+
+public class FixedDepositAccount : BankAccount
+{
+    public override void Withdraw(decimal amount)
+    {
+        throw new NotSupportedException(
+            "Withdrawals not allowed before maturity");
+    }
+}
+```
+
+```csharp
+public void ProcessWithdrawal(BankAccount account)
+{
+    account.Withdraw(1000); // Expectation: withdrawal always works
+}
+
+// Subclass changed behavior in a way client code didn’t expect
+
+BankAccount account = new FixedDepositAccount();
+ProcessWithdrawal(account); // Runtime exception
+```
+
+#### Correct Design (LSP-Compliant)
+
+#### Violation Smell:
+
+##### Approach : Split hierarchy by behavior
+
+```csharp
+public abstract class Account
+{
+    public decimal Balance { get; protected set; }
+}
+
+public interface IWithdrawable
+{
+    void Withdraw(decimal amount);
+}
+
+public class SavingsAccount : Account, IWithdrawable
+{
+    public void Withdraw(decimal amount)
+    {
+        Balance -= amount;
+    }
+}
+
+public class FixedDepositAccount : Account
+{
+    // No withdrawal capability
+}
+
+public void ProcessWithdrawal(IWithdrawable account)
+{
+    account.Withdraw(1000);
+}
+```
+
+### 4) Interface Segregation Principle (ISP)
+
+Clients should not depend on methods they don’t use. Smaller, role-based interfaces improve flexibility and testability.
+
+#### Violation Smell:
+
+* Fat interfaces
+* NotImplementedException
+
+#### Bad Eg.
+
+```csharp
+public interface IBankAccount
+{
+    void Deposit(decimal amount);
+    void Withdraw(decimal amount);
+    void ApplyLoan(decimal amount);
+    void IssueChequeBook();
+    void EarnInterest();
+}
+
+public class FixedDepositAccount : IBankAccount
+{
+    public void Deposit(decimal amount)
+    {
+        Console.WriteLine("Deposited");
+    }
+
+    public void Withdraw(decimal amount)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void EarnInterest()
+    {
+        Console.WriteLine("Interest added");
+    }
+}
+```
+
+#### Correct Design (ISP)
+
+```csharp
+public interface IDepositable
+{
+    void Deposit(decimal amount);
+}
+
+public interface IWithdrawable
+{
+    void Withdraw(decimal amount);
+}
+
+public interface IInterestBearing
+{
+    void EarnInterest();
+}
+
+public class FixedDepositAccount :
+    IDepositable,
+    IInterestBearing
+{
+    public void Deposit(decimal amount) { }
+    public void EarnInterest() { }
+}
+```
+
+### 5) Dependency Inversion Principle (DIP)
+
+* High-level modules should depend on abstractions, not concrete implementations. 
+* DIP enables loose coupling and makes unit testing possible.
+
+#### Violation Smell:
+
+* new keyword inside business logic
+* Hard-coded dependencies
+
+#### Bad Example:
+private FileLogger logger = new FileLogger();
+
+#### Correct Design (DIP)
+
+```csharp
+public interface ILogger
+{
+    void Log(string message);
+}
+
+public class UserService
+{
+    private readonly ILogger _logger;
+
+    public UserService(ILogger logger)
+    {
+        _logger = logger;
+    }
+}
+```
+
+
+| Question                                               | Expected Answer  |
+| ------------------------------------------------------ | ---------------- |
+| Which SOLID principle is most violated in legacy code? | SRP & DIP        |
+| Which principle reduces `if/else`?                     | OCP              |
+| Which principle prevents `NotImplementedException`?    | ISP              |
+| Which principle improves testability most?             | DIP              |
+| Can SOLID increase complexity?                         | Yes, if overused |
+
+--------------------------------------------------------------------------------------------------------------------------
