@@ -907,8 +907,6 @@ ProcessWithdrawal(account); // Runtime exception
 
 #### Correct Design (LSP-Compliant)
 
-#### Violation Smell:
-
 ##### Approach : Split hierarchy by behavior
 
 ```csharp
