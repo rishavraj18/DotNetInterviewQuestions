@@ -2402,3 +2402,182 @@ az acr login -n "Username"
 az acr build --image "repostitory image name" --registy "Container registry name(login server)" "Docker file path name/dockerfile ."
 
 ```
+
+--------------------------------------------------------------------------------------------------------------------------
+## Blocking vs Deadlock vs Timeout
+
+| Feature            | Blocking           | Deadlock                  | Timeout         |
+| ------------------ | ------------------ | ------------------------- | --------------- |
+| Cause              | Resource busy      | Circular wait             | Wait too long   |
+| Needs Lock?        | Usually yes        | Yes / resource contention | Not always      |
+| Automatic Recovery | Wait until free    | DB kills one victim       | Operation fails |
+| Temporary?         | Often yes          | No, must break cycle      | Ends with error |
+| Common In          | Databases, threads | Databases, threads        | DB, HTTP, APIs  |
+
+
+### Blocking:
+A holds lock → B waits
+
+### Deadlock:
+* A waits for B
+* B waits for A
+
+### Timeout:
+B waits too long → operation aborts
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Explicit Transaction in EF core
+
+```Csharp
+using var tx = await db.Database.BeginTransactionAsync();
+
+try
+{
+    await db.SaveChangesAsync();
+
+    // more changes
+    await db.SaveChangesAsync();
+
+    await tx.CommitAsync();
+}
+catch
+{
+    await tx.RollbackAsync();
+}
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+## How to add Retry Logic for Transient Failures ?
+
+```Csharp
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(
+        connectionString,
+        sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null);
+        }));
+
+```
+
+
+```Csharp
+builder.Services.AddHttpClient("payment")
+    .AddTransientHttpErrorPolicy(policy =>
+        policy.WaitAndRetryAsync(3,
+            retryAttempt => TimeSpan.FromSeconds(retryAttempt)));
+```
+--------------------------------------------------------------------------------------------------------------------------
+
+## OpenTelemetry in dotnet core app ?
+
+* OpenTelemetry in .NET Core is used for observability by collecting traces, metrics, and logs from the application. It helps monitor performance, diagnose issues, and trace requests across distributed systems. In ASP.NET Core, it is configured using AddOpenTelemetry() with instrumentations like ASP.NET Core, HttpClient, and SqlClient.
+
+In ASP.NET Core, OpenTelemetry is an open standard for observability. It helps you collect and export:
+
+* Logs → what happened
+* Metrics → how much / how fast
+* Traces → where request traveled
+
+It is widely used in modern cloud and microservices systems.
+
+
+
+```Pillars
+1. Traces
+
+Track a request across services.
+
+Example:
+
+Request started
+Payment API call
+SQL query
+Response returned
+2. Metrics
+
+Numerical measurements:
+
+Request count
+CPU
+Memory
+Latency
+Error rate
+3. Logs
+
+Structured events:
+
+Exceptions
+Warnings
+Business events
+```
+
+### OpenTelemetry is commonly used to collect telemetry from your apps and send it to Azure monitoring tools such as:
+
+* Azure Monitor
+* Application Insights (builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];)
+* Log Analytics
+
+```c#
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSqlClientInstrumentation()
+            .AddConsoleExporter();
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddConsoleExporter();
+    });
+
+var app = builder.Build();
+app.MapGet("/", () => "Hello");
+app.Run();
+
+```
+
+```c#
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(t =>
+    {
+        t.AddAspNetCoreInstrumentation()
+         .AddHttpClientInstrumentation()
+         .AddSqlClientInstrumentation()
+         .AddAzureMonitorTraceExporter(options =>
+         {
+             options.ConnectionString =
+                 builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+         });
+    })
+    .WithMetrics(m =>
+    {
+        m.AddAspNetCoreInstrumentation()
+         .AddHttpClientInstrumentation()
+         .AddAzureMonitorMetricExporter(options =>
+         {
+             options.ConnectionString =
+                 builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+         });
+    });
+```
+--------------------------------------------------------------------------------------------------------------------------
