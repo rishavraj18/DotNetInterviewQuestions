@@ -1051,14 +1051,42 @@ public class UserService
 
 --------------------------------------------------------------------------------------------------------------------------
 
-## How to secure Asp.Net core application: (****Add more***)
+## How to secure Asp.Net core application: 
 
-### 1)  Man-in-the-middle attacks (MITM) and downgrade attacks -> UseHsts();
+### 1) Authentication:
+
+* JWT Bearer Tokens
+* OpenID Connect
+* OAuth2
+* Microsoft Entra ID
+
+### 2) Authorization
+
+* Prefer policy-based auth for enterprise apps e.g. [Authorize(Policy = "CanApproveLoan")]
+* Principle of Least Privilege
+
+### 3) Always Use HTTPS
+
+Encrypt traffic in transit.
+
+```csharp
+app.UseHttpsRedirection();
+```
+
+### 4)  Man-in-the-middle attacks (MITM) and downgrade attacks -> UseHsts();
 
  Enable HTTP Strict Transport Security (HSTS).<br/>
  All future attempts to access HTTP are automatically converted to HTTPS inside the browser, without hitting your server.
+
+ ### 5) Secure Secrets Management:
+
+ Never store secrets in code or Git.
+
+ #### Use:
+ * Environment variables
+ * Azure Key Vault
  
-### 2) Cross-Site Request Forgery (CSRF) 
+### 6) Cross-Site Request Forgery (CSRF) 
 
 Tricking a logged-in user to perform actions unknowingly<br/>
 
@@ -1087,30 +1115,44 @@ public IActionResult Submit(MyModel model)
 }
 ```
 
-### 3)  SQL Injection
+### 7) Input Validation:
+
+* Data annotations
+* FluentValidation
+
+### 8) Prevent SQL Injection
 
 * Attacker injects malicious SQL into input fields to manipulate the database e.g. ' OR 1=1 --
 * Impact: Data leakage, Authentication bypass, Data deletion
-* Prevention: Parameterized queries, ORM (EF Core), WAF SQL injection rules, Input validation, Never use string concatenation for SQL
+* Prevention: Parameterized queries, ORM (EF Core), WAF SQL injection rules, Input validation, Never use string concatenation for SQL, Stored Procedure
 
 ```csharp
 context.Users
     .Where(u => u.Email == email); // Safe (parameterized)
 ```
 
-*Stored procedure is dicussed below*
-
-### 4)  XSS (Cross-Site Scripting)
+### 9)  XSS (Cross-Site Scripting)
 
 * Injecting malicious JavaScript into web pages
 * Types : Stored XSS, Reflected XSS, DOM-based XSS
 * Impact : Session hijacking, Cookie theft, Account takeover
-* Prevention : Output encoding, Content Security Policy (CSP), WAF XSS filters
+* Prevention : Output encoding (HTML encode output), Content Security Policy (CSP) headers, WAF XSS filters
 
 e.g. Razor automatically HTML-encodes output
 
+ ### 10) CORS
 
-### 5) Path Traversal
+ ```csharp
+ builder.Services.AddCors(options =>
+ {
+    options.AddPolicy("AllowUI", policy =>
+        policy.WithOrigins("https://myapp.com")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+ });
+```
+
+### 11) Path Traversal
 
 * Accessing files outside intended directories
 * Impact : Sensitive file access, Config leakage
@@ -1135,12 +1177,88 @@ Database
 
  ```
 
- ### 6) CORS
+ ### 12) Rate Limiting
 
- ### 7) ORM framework
+ ### 13) Use Secure Headers
+
+Add headers like:
+
+* X-Content-Type-Options
+* X-Frame-Options
+* Content-Security-Policy
+* Referrer-Policy
+
+### 14) Secure Coding Practices
+
+* Nullable reference types
+* Avoid hardcoded credentials
+* Dispose resources
+* Validate file uploads
+* Sanitize filenames
+* Avoid deserialization risks
+
+### 15) Secret rotation
+
+CyberArk password rotation
+
+### 16) 
 
 
- --------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+
+## Explain Checkmarx, SonarQube, Snyk ?
+
+| Tool      | Main Focus                   | Best At                                      |
+| --------- | ---------------------------- | -------------------------------------------- |
+| Checkmarx | App security testing         | Finding vulnerabilities in source code       |
+| SonarQube | Code quality + some security | Bugs, code smells, maintainability, coverage |
+| Snyk      | Open source & cloud security | Vulnerable dependencies, containers, IaC     |
+
+```compare
+Checkmarx = Is my own code vulnerable?
+SonarQube = Is my code clean and maintainable?
+Snyk = Are my packages / containers vulnerable?
+```
+
+### 1) Checkmarx:
+
+* Checkmarx is mainly a security scanning tool for your application source code.
+* Static Application Security Testing (SAST)
+
+#### Common Findings
+* SQL Injection
+* XSS
+* Command Injection
+* Hardcoded secrets
+* Insecure cryptography
+* Path traversal
+
+### 2) SonarQube:
+
+SonarQube focuses on code quality, maintainability, and also some security rules.
+
+#### Common Findings:
+
+* Null reference risks
+* Unused variables
+* Duplicate methods
+* High cyclomatic complexity
+* Missing unit tests
+* Bad naming conventions
+
+
+### 3) Snyk:
+
+Snyk is strongest in dependency and supply-chain security.
+
+#### What It Does
+* Scans NuGet / npm / Maven packages
+* Finds known CVEs
+* Container image scanning
+* Infrastructure as Code scanning
+* Secrets scanning
+
+--------------------------------------------------------------------------------------------------------------------------
 
 ## What is the benefit of code first approach in EF core?
 
@@ -1370,6 +1488,20 @@ Add: X-Frame-Options, Content-Security-Policy
 
 --------------------------------------------------------------------------------------------------------------------------
 
+## Middleware vs Filters:
+
+| Feature                   | Middleware        | Filters                    |
+| ------------------------- | ----------------- | -------------------------- |
+| Runs For                  | All HTTP requests | MVC/API actions only       |
+| Layer                     | HTTP Pipeline     | MVC Pipeline               |
+| Access Controller Context | No                | Yes                        |
+| Access Action Arguments   | No                | Yes                        |
+| Can Short-Circuit         | Yes               | Yes                        |
+| Use Per Action            | No                | Yes                        |
+| Best For                  | Global concerns   | Controller/action concerns |
+
+--------------------------------------------------------------------------------------------------------------------------
+
 ## Explain Request Flow in dotnet core application?
 
 ```Request flow
@@ -1406,5 +1538,867 @@ Client Receives Response
   "id":10,
   "name":"Rishav"
 }
+
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+## Data Annotation vs Fluent API:
+
+| Feature              | Data Annotation | Fluent API |
+| -------------------- | --------------- | ---------- |
+| Simple validation    | ✅               | ✅          |
+| MaxLength            | ✅               | ✅          |
+| Relationships        | Limited         | ✅ Strong   |
+| Composite Key        | ❌               | ✅          |
+| Indexes              | Limited         | ✅          |
+| Advanced Mapping     | ❌               | ✅          |
+| Cleaner Domain Model | ❌               | ✅          |
+
+### Eg. Data Annotation
+
+```c#
+public class Customer
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public List<Order> Orders { get; set; }
+}
+
+public class Order
+{
+    public int Id { get; set; }
+    public int CustomerId { get; set; }
+    public Customer Customer { get; set; }
+}
+
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity<Customer>(entity =>
+    {
+        entity.ToTable("Customers");
+
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Name)
+              .IsRequired()
+              .HasMaxLength(100);
+    });
+
+    modelBuilder.Entity<Order>(entity =>
+    {
+        entity.HasKey(x => x.Id);
+
+        entity.HasOne(x => x.Customer)
+              .WithMany(x => x.Orders)
+              .HasForeignKey(x => x.CustomerId);
+    });
+}
+
+// Seed data
+
+entity.HasData(
+    new Customer { Id = 1, Name = "Rishav" }
+);
+
+```
+
+### Why Fluent API over attributes?
+
+More powerful, centralized, cleaner.
+
+### Can both be used together?
+
+Yes. Fluent API overrides annotations if conflict occurs.
+
+### Where does it execute?
+
+When EF builds the model at startup / first use.
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Async vs Parallelism
+
+| Topic                      | Async                        | Parallelism                             |
+| -------------------------- | ---------------------------- | --------------------------------------- |
+| Goal                       | Don’t block while waiting    | Finish work faster using multiple cores |
+| Best For                   | I/O operations               | CPU-intensive operations                |
+| Uses Threads Continuously? | Usually no while waiting     | Yes, active workers                     |
+| Scales Web APIs?           | ✅ Excellent                  | ⚠️ Limited if overused                  |
+| Example                    | DB call, HTTP call, file I/O | Image processing, hashing, calculations |
+
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## .NET Core (ASP.NET Core) application performance
+
+### 1) Use Async:
+
+* Use async/await for I/O operations (DB, API calls)
+* Prevents thread starvation → improves scalability
+* Avoid blocking calls (.Result, .Wait())
+
+```csharp
+public async Task<IActionResult> GetOrders()
+{
+    var orders = await _context.Orders.ToListAsync();
+    return Ok(orders);
+}
+```
+
+### 2) Threading & Concurrency:
+
+
+### 3) Minimize Allocations:
+
+* Avoid unnecessary object creation
+* Use Span<T>, Memory<T> where needed
+* Reuse objects (e.g., HttpClient) using IHttpClientFactory
+
+```csharp
+// Span<T>, Memory<T>
+
+int[] numbers = { 1, 2, 3, 4, 5 };
+
+Span<int> span = numbers;
+span[0] = 100;
+
+Console.WriteLine(numbers[0]); // 100 It modifies original array because span is just a view.
+
+// Memory<T>
+
+Memory<T> is similar to Span<T>, but it can live on the heap and be used in:
+
+async methods
+await
+fields
+properties
+long-lived objects
+
+int[] data = { 1, 2, 3, 4, 5 };
+
+Memory<int> memory = data;
+Memory<int> part = memory.Slice(1, 2);
+
+Span<int> span = part.Span;
+
+Console.WriteLine(span[0]); // 2
+
+```
+
+| Feature               | Span<T> | Memory<T>       |
+| --------------------- | ------- | --------------- |
+| Stack only            | ✅       | ❌               |
+| Heap storage          | ❌       | ✅               |
+| Async safe            | ❌       | ✅               |
+| Fastest access        | ✅       | Slightly slower |
+| Can be field/property | ❌       | ✅               |
+| Use in sync methods   | ✅       | ✅               |
+
+
+```csharp
+
+//IHttpClientFactory
+
+builder.Services.AddHttpClient();
+
+public class ApiService
+{
+    private readonly HttpClient _client;
+
+    public ApiService(IHttpClientFactory factory)
+    {
+        _client = factory.CreateClient();
+    }
+
+    public async Task<string> GetData()
+    {
+        return await _client.GetStringAsync("https://api.example.com");
+    }
+}
+```
+
+### 4) Response Compression:
+
+Reduces payload size → faster network transfer
+
+```csharp
+services.AddResponseCompression();
+```
+
+### 4) Use Efficient Serialization:
+
+Prefer System.Text.Json over Newtonsoft as: No extra package required, Span<T> and Low allocations, Faster serialization/deserialization
+
+### 5) Caching Strategy:
+
+#### Types:
+* Response caching
+* Data caching
+* Output caching (.NET 7+)
+
+### 5) API & Network Optimization:
+
+* Use Pagination
+
+```csharp
+.Skip(page * size).Take(size)
+```
+
+* Enable HTTP/2 + Kestrel tuning
+
+```csharp
+"Kestrel": {
+  "Limits": {
+    "MaxConcurrentConnections": 100
+  }
+}
+```
+
+* gRPC:
+
+Faster due to binary protocol
+
+
+### 6) Azure-Specific Optimization:
+
+* Use Auto Scaling
+* Static files → Azure CDN
+* Use Azure Front Door / API Management : Caching + load balancing
+
+
+### 7) Benchmarking & Profiling:
+
+* dotnet-counters
+* dotnet-trace
+* PerfView
+* Application Insights
+
+
+### 8) Use Minimal APIs (for lightweight services)
+
+### 9) Use Background Processing
+
+Offload heavy tasks:
+
+* Azure Service Bus
+
+### 10) Use Event-Driven Architecture
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Database performance tuning
+
+### 1) Indexing:
+
+#### Create indexes on:
+
+* WHERE conditions
+* JOIN columns
+* ORDER BY, GROUP BY
+
+#### Types:
+
+* Clustered Index → primary sorting
+* Non-clustered Index → fast lookups
+* Composite Index → multi-column queries
+
+### 2) Normalize & Denormalize
+
+* Normalization → avoids redundancy
+* Denormalization → improves read performance (for heavy read systems)
+
+### 3) Proper Data Types
+
+Use correct types:
+
+* INT instead of VARCHAR
+* DATETIME2 instead of DATETIME
+
+### 4) Query Optimization
+
+* Avoid SELECT *
+* Use only required columns
+* Avoid N+1 Queries
+
+```csharp
+// Bad (multiple DB calls)
+
+foreach (var user in users)
+{
+    var orders = context.Orders.Where(o => o.UserId == user.Id);
+}
+
+// Good (single query)
+
+var data = context.Users
+    .Include(u => u.Orders)
+    .ToList();
+```
+
+### 5) .NET / Entity Framework Optimization
+
+Use AsNoTracking (for read-only)
+
+```csharp
+var users = context.Users.AsNoTracking().ToList();
+```
+
+### 6) Monitoring & Diagnostics
+
+* SQL Server Profiler
+* Azure Application Insights
+
+#### Metrics to Watch
+* Slow queries
+* Deadlocks
+* CPU usage
+* IO waits
+
+## Common Mistakes
+* Missing indexes
+* Using SELECT *
+* Not using pagination
+* Ignoring execution plans
+* Overusing EF without optimization
+* Not caching frequently accessed data
+
+### If your app is slow:
+
+* Check slow queries (Profiler / Query Store)
+* Add indexes
+* Optimize queries
+* Add caching
+* Optimize EF (AsNoTracking, Includes)
+* Scale DB (replicas / partitioning)
+--------------------------------------------------------------------------------------------------------------------------
+
+## Lifecycle of middleware in dotnet core:
+
+* The HTTP request travels downward through middleware in the order they are registered.
+* The HTTP response travels upward back through the same middleware in reverse order.
+* Above happens because each middleware calls await next() and then continues executing after the next middleware finishes.
+
+### Analogy:
+
+Like opening nested boxes:
+
+```flow
+Open Box A
+ Open Box B
+  Open Box C
+   Item
+  Close Box C
+ Close Box B
+Close Box A
+```
+
+Middleware are small components connected in order. Each middleware can:
+
+* Inspect request
+* Modify request
+* Call next middleware
+* Short-circuit pipeline
+* Inspect/modify response
+* Handle exceptions
+* Log timing/security data
+
+### Step 1 — Request Arrives
+
+* GET /api/loan/10
+* Kestrel (web server) receives it.
+
+### Step 2 — Pipeline Starts
+
+ASP.NET Core creates HttpContext containing:
+
+* Request
+* Response
+* User
+* Headers
+* Services
+* Items
+* Cancellation token
+
+### Step 3 — Middleware Executes in Order
+
+#### A) Exception Middleware
+
+Wraps downstream pipeline. If any later middleware throws, it catches and returns friendly error.
+
+```csharp
+app.UseExceptionHandler(...)
+```
+
+#### B) HTTPS Redirection
+
+Redirects HTTP to HTTPS.
+
+```csharp
+app.UseHttpsRedirection();
+```
+
+#### C) Static Files
+
+If request is /logo.png, it may serve file directly and stop pipeline. This is called short-circuiting.
+
+```csharp
+app.UseStaticFiles();
+```
+
+#### D) Routing
+
+Matches URL to endpoint metadata.
+
+#### Example:
+/api/loan/10 → LoanController.Get(id)
+
+```csharp
+app.UseRouting();
+```
+
+#### E) Authentication
+
+```csharp
+app.UseAuthentication();
+```
+
+Validates cookie/JWT token and sets:
+
+* HttpContext.User
+
+#### F) Authorization
+
+```csharp
+app.UseAuthorization();
+```
+
+Checks permissions like:
+
+```csharp
+[Authorize]
+[Authorize(Policy = "CanApproveLoan")]
+```
+
+#### G) Endpoint Execution
+
+```csharp
+app.MapControllers();
+```
+
+* Controller action runs.
+* return Ok(data);
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Example request-down / response-up behavior with two middleware:
+
+```csharp
+app.Use(async (ctx, next) =>
+{
+    Console.WriteLine("A Request");
+    await next();
+    Console.WriteLine("A Response");
+});
+
+app.Use(async (ctx, next) =>
+{
+    Console.WriteLine("B Request");
+    await next();
+    Console.WriteLine("B Response");
+});
+
+app.Run(async ctx =>
+{
+    Console.WriteLine("Endpoint");
+    await ctx.Response.WriteAsync("Done");
+});
+
+```
+
+### Output Order:
+
+* A Request
+* B Request
+* Endpoint
+* B Response
+* A Response
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Design patterns in microservices ?
+
+Microservices commonly use many design patterns to solve problems like service communication, resiliency, data consistency, deployment, observability, and scaling. It has a collection of patterns used together.
+
+### Categories of Microservices Patterns
+* Decomposition patterns
+* Communication patterns
+* Data patterns
+* Resiliency patterns
+* Observability patterns
+* Deployment patterns
+* Security patterns
+
+### Decomposition patterns
+
+#### 1) Decompose by Business Capability
+
+* Split services based on business functions/capabilities.
+* Focus: organizational/business responsibilities
+* Departments in a company : HR, Finance, Sales
+
+* Loan Service
+* Customer Service
+* Payment Service
+* Notification Service
+
+#### 2) Bounded Context (DDD)
+
+* A boundary where a domain model has consistent meaning, rules, and language. 
+* Focus: model consistency and domain language
+* Same word means different things in each department : Bank account, User account etc.
+
+#### The word Customer may mean different things in:
+* CRM Context
+* Billing Context
+* Account
+
+#### 3) Strangler Fig Pattern
+
+* Gradually replace monolith modules with microservices
+* Old Monolith -> Route Loan Module -> New Loan Service
+* Best for migrations.
+
+### Communication Patterns
+
+#### 1) API Gateway Pattern
+
+Single entry point for clients.
+Example: Microsoft Azure API Management, YARP, Ocelot.
+
+#### Responsibilities:
+
+* Routing
+* Authentication
+* Rate limiting
+* Aggregation
+* Logging
+
+#### 2) Synchronous Request/Response
+
+* REST or gRPC between services.
+* Use when immediate response is required.
+
+#### 3) Asynchronous Messaging
+
+* Better decoupling.
+
+Use queues/events via:
+
+* Microsoft Azure Service Bus
+* RabbitMQ
+* Apache Kafka
+
+
+### Data Patterns
+
+#### 1) Database per Service
+
+* Each microservice owns its own database.
+* Prevents tight coupling.
+
+```database
+Loan Service -> Loan DB
+Customer Service -> Customer DB
+```
+
+#### 2) CQRS (Command Query Responsibility Segregation)
+
+Separate:
+* Writes (commands)
+* Reads (queries)
+
+Useful for high-scale systems.
+
+#### 3) Event Sourcing
+
+Store state changes as events.
+
+* LoanCreated
+* LoanApproved
+* LoanDisbursed
+
+Can rebuild state later.
+
+#### 4) Saga Pattern:
+
+* Manages distributed transactions across services.
+* Instead of one DB transaction.
+
+Example loan flow:
+
+* Create application
+* Reserve funds
+* Send documents
+* If step fails → compensate previous steps
+
+Types:
+
+* Choreography
+* Orchestration
+
+### Resiliency Patterns
+
+#### 1) Retry Pattern
+
+* Retry temporary failures.
+* Used with Polly / resilience libraries.
+
+#### 2) Circuit Breaker
+
+* Stop calling failing service temporarily.
+* Prevents cascading failures.
+
+#### 3) Timeout
+
+Fail fast if dependency is slow.
+
+### Observability Patterns
+
+#### 1) Centralized Logging
+
+* Collect logs from all services.
+* Example: ELK, Seq, Application Insights.
+
+#### 2) Distributed Tracing
+
+* Track one request across many services.
+* Trace ID flows through services.
+* Example: OpenTelemetry.
+
+#### 3) Health Checks
+
+* Expose readiness/liveness endpoints.
+* Used by Kubernetes, Aspire
+
+### Deployment Patterns
+
+#### 1) Blue-Green Deployment
+
+Two environments:
+
+* Blue = current
+* Green = new
+* Switch traffic safely.
+
+#### 2) Canary Deployment
+
+Release to small % of users first.
+
+### Security Patterns
+
+#### 1) Central Authentication
+
+Use identity provider:
+
+* Microsoft Entra ID
+* IdentityServer
+* OAuth providers
+
+Token Propagation
+* JWT passed between services securely.
+
+### Outbox Pattern (Very Important)
+
+#### Problem:
+DB save succeeds but event publish fails.
+
+#### Solution:
+Save event in DB outbox table, publish later reliably.
+Used in enterprise systems.
+
+### Common Patterns in .NET Microservices
+
+For ASP.NET Core:
+
+* API Gateway
+* HttpClientFactory
+* Retry + Circuit Breaker
+* Background Worker
+* Outbox Pattern
+* CQRS + MediatR
+* Saga
+* Distributed Cache
+* Health Checks
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## SAGA 
+
+* The Saga pattern is used in microservices to manage a business transaction that spans multiple services without using a distributed database transaction.
+* With Azure Service Bus, Saga is commonly implemented using messages, queues/topics, events, and compensating actions.
+* This is very useful in banking, e-commerce, loan processing, and order workflows.
+
+### Why Saga Is Needed ?
+
+In a monolith with one database:
+
+```flow
+BEGIN TRANSACTION
+Step1
+Step2
+Step3
+ROLLBACK/COMMIT
+```
+
+In microservices:
+
+* Each service has its own database
+* No single DB transaction across services
+* Need eventual consistency
+* Saga solves this
+
+## Real Flow (Orchestration)
+
+### Step 1 — API Receives Request
+
+```flow
+POST /loan/apply
+```
+
+* Loan service stores application.
+* Publishes command: VerifyDocuments
+
+### Step 2 — Document Service
+
+* Consumes message
+* If success: Publish DocumentsVerified
+* If fail: Publish DocumentsRejected
+
+### Step 3 — Credit Service
+
+* Consumes next command/event.
+* Publishes:CreditApproved
+* or failure event.
+
+### Step 4 — Funding Service
+
+* Reserves funds.
+* If fails: FundsReservationFailed
+
+### Step 5 — Compensation
+
+* Each service performs its own compensating action.
+* Need to track progress
+
+#### If funds reservation fails:
+
+* Mark loan rejected
+* Release temporary holds
+* Notify customer
+
+#### E.g. Instead of rollback SQL transaction:
+
+* Undo Document Verification Status
+* Undo Credit Reservation
+* Set Loan Status = Failed
+
+
+### Advantages of SAGA pattern:
+
+#### Works Across Multiple Services
+
+* Each microservice owns its own database.
+* Saga lets these services participate in one business workflow without sharing a single DB transaction.
+
+#### Avoids Distributed Transactions
+
+* Traditional 2-phase commit across services is:Complex, Slow
+* Saga avoids this by using local transactions + events/messages.
+
+#### Loose Coupling
+
+* Services communicate through messages/events.
+* They do not need tight runtime dependency on one shared transaction manager.
+
+#### Fault Tolerance
+
+If one step fails:
+
+* Retry
+* Compensate previous steps
+* Continue safely
+
+#### Eventual Consistency
+
+* Instead of instant global consistency, the system becomes consistent over time.
+* This is practical and common in distributed systems.
+
+#### Better Business Traceability
+
+* ApplicationCreated
+* DocumentsVerified
+* CreditApproved
+* FundsReserved
+* LoanApproved
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Why Azure Service Bus Helps
+
+#### Reliable Delivery
+Messages persisted
+
+#### Retry Support
+Transient failures recover
+
+#### Dead Letter Queue
+Poison messages isolated
+
+#### Duplicate Detection
+Avoid repeated processing
+
+#### Sessions
+Keep related messages grouped
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Container App Deployment:
+
+### 1) Deploy from VS
+
+```docker
+VS:
+Dot net project -> docker file
+Publish> Add profile > push image to Azure Container Registry with tag 'latest'
+Authenticate VS using Azure account credential -> List Registry from Azure
+Publish
+
+
+Azure:
+Azure container Registry created
+Access Keys : 
+  Registry name and Login server
+  Admin User : UserName and Password
+Once Publish from VS, Repository is created in ACR
+Container should be associated to App Service:
+ - App Service > Create Web App > Subscription > Resource Group > Publish > Container
+ - Image Source = ACR
+ - Select Registry, Image, Tag 'latest', any startup command
+
+```
+
+### 2) Deploy from Azure CLI
+
+```docker
+Azure CLI: To push image to ACR
+
+az login
+ - popup browser for authentication
+ - show user id and details if successfull login
+
+az acr login -n "Username" 
+
+az acr build --image "repostitory image name" --registy "Container registry name(login server)" "Docker file path name/dockerfile ."
 
 ```
