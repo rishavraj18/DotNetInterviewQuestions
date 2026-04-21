@@ -372,7 +372,7 @@ Validate approval -> Transfer to seller/builder -> Update status -> Publish even
 
 ### Step 10: Report Generation
 
-* Report generation and Audit monthly, quarterly, yearly.
+* Report generation and Audit quarterly, yearly.
 
 ### Imp Notes:
 
@@ -2578,4 +2578,36 @@ builder.Services.AddOpenTelemetry()
          });
     });
 ```
+--------------------------------------------------------------------------------------------------------------------------
+
+* Store secrets in Key Vault → App authenticates using Managed Identity → Read secret securely at runtime.
+* This avoids storing passwords in appsettings.json, source code, or pipelines.
+
+```flow
+Store Secret in Azure Key Vault
+        ↓
+Enable Managed Identity on App Service / VM
+        ↓
+Give App Access to Key Vault using RBAC or Access policy
+        ↓
+.NET App uses DefaultAzureCredential()
+        ↓
+Reads password at runtime
+```
+
+```C#
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+
+var vaultUri = new Uri("https://yourvaultname.vault.azure.net/");
+
+var client = new SecretClient(
+    vaultUri,
+    new DefaultAzureCredential());
+
+KeyVaultSecret secret = await client.GetSecretAsync("DbPassword");
+
+string password = secret.Value;
+```
+
 --------------------------------------------------------------------------------------------------------------------------
