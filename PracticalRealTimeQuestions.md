@@ -2770,3 +2770,73 @@ Blue/Green deploy
 Smoke tests
 ```
 --------------------------------------------------------------------------------------------------------------------------
+
+## Ways to Maintain Consistency in microservices
+
+### 1. Saga Pattern (Most Common):
+
+* A saga breaks one business transaction into multiple local transactions.
+* If one step fails, run compensating actions.
+  * Two styles:
+        - Choreography (events)
+        - Orchestration (central coordinator)
+
+```
+Create Order
+ ↓
+Reserve Inventory
+ ↓
+Take Payment
+ ↓
+If payment fails → release inventory
+```
+
+### 2. Event-Driven / Eventual Consistency
+
+* Service updates its DB and publishes an event.
+* Other services consume event and update their own state.
+* Temporary delay is acceptable.
+
+```
+PaymentCompleted event
+   ↓
+Order Service marks Paid
+   ↓
+Notification sends SMS
+```
+
+### 3. Outbox Pattern
+
+* Prevents “DB updated but message not sent” problem.
+* Write business data + outgoing event in same local transaction.
+
+Then background worker publishes event.
+
+```
+Example
+Orders table updated
+Outbox table inserted
+Same transaction
+```
+
+Reliable messaging afterward.
+
+### 4. Idempotency
+
+* Consumers may receive duplicate messages.
+* Process same event safely only once.
+* Use message ID / request ID tracking.
+
+### 5. Retries + Dead Letter Queue
+
+* If downstream service is temporarily unavailable:
+* Retry automatically
+* If repeated failure → move to dead letter queue for investigation
+
+### 6. CQRS + Read Models
+
+* Write side and read side separated.
+* Read models are updated asynchronously from events.
+* Improves scalability while accepting eventual consistency.
+
+--------------------------------------------------------------------------------------------------------------------------
