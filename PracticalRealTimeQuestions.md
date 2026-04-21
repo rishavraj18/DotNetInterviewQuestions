@@ -2579,6 +2579,7 @@ builder.Services.AddOpenTelemetry()
     });
 ```
 --------------------------------------------------------------------------------------------------------------------------
+## Azure Key Vault ?
 
 * Store secrets in Key Vault → App authenticates using Managed Identity → Read secret securely at runtime.
 * This avoids storing passwords in appsettings.json, source code, or pipelines.
@@ -2610,4 +2611,162 @@ KeyVaultSecret secret = await client.GetSecretAsync("DbPassword");
 string password = secret.Value;
 ```
 
+--------------------------------------------------------------------------------------------------------------------------
+
+## What are the test which can run in CI/CD pipeline ADO ?
+
+```flow
+Commit / PR
+   ↓
+Build
+   ↓
+Unit Tests
+   ↓
+Code Quality / Security
+   ↓
+Integration Tests
+   ↓
+API / UI Tests
+   ↓
+Performance Tests
+   ↓
+Deploy
+   ↓
+Smoke / Regression Tests
+```
+
+### Unit Tests
+
+```yaml
+- task: DotNetCoreCLI@2
+  inputs:
+    command: test
+    projects: '**/*Tests.csproj'
+```
+
+```C# 
+using Xunit;
+
+public class CalculatorTests
+{
+    [Fact]
+    public void Add_ReturnsSum()
+    {
+        // Arrange
+        var calculator = new Calculator();
+        int a = 2;
+        int b = 3;
+
+        // Act
+        var result = calculator.Add(a, b);
+
+        // Assert
+        Assert.Equal(5, result);
+    }
+}
+```
+
+```C# 
+using NUnit.Framework;
+
+[TestFixture]
+public class CalculatorTests
+{
+    [Test]
+    public void Add_ReturnsSum()
+    {
+        // Arrange
+        var calculator = new Calculator();
+        int a = 2;
+        int b = 3;
+
+        // Act
+        var result = calculator.Add(a, b);
+
+        // Assert
+        Assert.AreEqual(5, result);
+    }
+}
+```
+
+```C# 
+
+// Mocking
+
+using Xunit;
+using Moq;
+
+public class UserServiceTests
+{
+    [Fact]
+    public void GetWelcomeMessage_ReturnsExpectedMessage()
+    {
+        // Arrange
+        var mockRepo = new Mock<IUserRepository>();
+
+        mockRepo.Setup(x => x.GetUserName(1))
+                .Returns("Rishav");
+
+        var service = new UserService(mockRepo.Object);
+
+        // Act
+        var result = service.GetWelcomeMessage(1);
+
+        // Assert
+        Assert.Equal("Welcome Rishav", result);
+    }
+}
+```
+
+| Feature                           | xUnit                                  | NUnit                   |
+| --------------------------------- | -------------------------------------- | ----------------------- |
+| Popular in modern .NET Core       | ✅ Very high                            | ✅ High                  |
+| Microsoft samples/community usage | ✅ Strong                               | ✅ Strong                |
+| Test attribute                    | `[Fact]`, `[Theory]`                   | `[Test]`, `[TestCase]`  |
+| Setup/Teardown style              | Constructor / `IDisposable` / fixtures | `[SetUp]`, `[TearDown]` |
+| Parameterized tests               | `[Theory]` + `InlineData`              | `[TestCase]`            |
+| Parallel support                  | ✅ Good                                 | ✅ Good                  |
+| Assertions                        | `Assert.Equal()`                       | `Assert.AreEqual()`     |
+| Learning curve                    | Simple                                 | Very approachable       |
+| Legacy .NET Framework usage       | Good                                   | Very strong             |
+| Extensibility                     | Strong                                 | Strong                  |
+
+--------------------------------------------------------------------------------------------------------------------------
+## CI/CD
+
+```YAML
+trigger:
+- main
+
+steps:
+- task: UseDotNet@2
+
+- script: dotnet restore
+- script: dotnet build --configuration Release
+- script: dotnet test --collect:"XPlat Code Coverage"
+
+- script: dotnet publish
+```
+
+```flow
+CI Stage:
+Build solution
+Unit tests
+SonarQube scan
+Snyk dependency scan
+
+CD Stage (QA):
+Deploy
+Integration tests
+API tests
+Smoke tests
+
+Pre-Prod:
+Performance tests
+Regression suite
+
+Prod:
+Blue/Green deploy
+Smoke tests
+```
 --------------------------------------------------------------------------------------------------------------------------
