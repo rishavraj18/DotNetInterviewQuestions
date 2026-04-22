@@ -2840,3 +2840,785 @@ Reliable messaging afterward.
 * Improves scalability while accepting eventual consistency.
 
 --------------------------------------------------------------------------------------------------------------------------
+
+## Facing issue in the container application and there are no logs generated, how to troubleshoot that issue ?
+
+* If a containerized application fails and no logs are generated, it usually means the failure is happening before your app logging pipeline starts or logs are not reaching the configured sink.
+
+* I first check whether the container starts at all using container state, exit codes, and events. Then I inspect ENTRYPOINT, environment variables, ports, resource limits, and health probes. In Kubernetes I use describe pod, events, and previous logs. For .NET apps, I enable early bootstrap console logging and verify external dependencies like DB or Redis from inside the container.
+
+### 1. First Identify Where It Fails
+
+Think in layers:
+
+* Container never starts
+* Container starts then crashes immediately
+* App runs but traffic never reaches it
+* App runs but logs are misconfigured
+* Infra issue (Kubernetes / Docker / Network / Secrets / Storage)
+
+### 2. Basic Checks (Docker / Container Runtime)
+
+Check container state
+
+```bash
+docker ps -a
+```
+
+Look for:
+
+* Exited
+* Restarting
+* OOMKilled
+* CrashLoopBackOff (K8s)
+
+### 3. Check Startup Command / ENTRYPOINT
+
+Wrong command is a common reason.
+
+```bash
+docker inspect <container-id> | grep Entrypoint
+```
+
+For .NET:
+
+```dockerfile
+ENTRYPOINT ["dotnet", "MyApp.dll"]
+```
+Common issues:
+
+* Wrong DLL name
+* Missing file after publish
+* Wrong working directory
+
+### 4. Enter the Container Manually
+
+Run interactive shell:
+
+```bash
+docker run -it --entrypoint sh myimage
+```
+
+Then verify:
+
+```bash
+ls
+dotnet MyApp.dll
+printenv
+```
+
+This helps detect:
+
+* Missing assemblies
+* Bad config
+* Missing environment variables
+* Permission issues
+
+### 5. Check Environment Variables
+
+Many apps fail before logs if config is missing.
+
+Examples:
+
+* Connection strings
+* Key Vault secrets
+* API keys
+* ASPNETCORE_ENVIRONMENT
+
+Check:
+
+```bash
+docker exec -it <container-id> printenv
+```
+
+### 6. Port Binding Problems
+
+* Our app may run, but not exposed correctly.
+* Check if app listens on expected port.
+
+For ASP.NET Core:
+
+```bash
+ASPNETCORE_URLS=http://+:8080
+```
+
+Verify container port mapping:
+
+```bash
+docker ps -- for container
+docker port <container_name_or_id> -- to see all active mappings for one container
+```
+
+### 7. Resource Issues (CPU / Memory)
+
+Container may be killed before logging
+
+Check:
+
+```bash
+docker stats
+```
+
+If memory limit too low:
+
+* App crashes during startup
+* GC pressure
+* OOMKilled
+
+### 8. Kubernetes Troubleshooting
+
+If running in Kubernetes:
+
+#### Pod status
+
+```bash
+kubectl get pods
+kubectl get pods -A
+kubectl get deploy -A
+kubectl get svc -A
+kubectl get ingress -A
+```
+#### Describe pod
+
+```
+kubectl describe pod <pod-name>
+```
+This shows:
+
+* Events
+* Failed mounts
+* Image pull errors
+* Probe failures
+* OOMKilled
+
+#### Previous crashed container logs
+
+Even if current pod has no logs, previous instance may.
+
+```bash
+kubectl logs <pod-name> --previous
+```
+Exec into pod
+
+```bash
+kubectl exec -it <pod-name> -- sh
+```
+
+### 9. Health Probe Failures
+
+App may start but killed by readiness/liveness probes before logs flush.
+
+#### Check probe config:
+
+```
+</> YAML
+livenessProbe:
+readinessProbe:
+```
+
+#### Common issue:
+
+* Probe path wrong (/health)
+* App startup takes longer than probe delay
+
+```
+initialDelaySeconds: 30
+```
+
+### 10. Check Image Issues
+
+Wrong image build / corrupted publish.
+
+#### Validate locally:
+
+If fails locally → image issue
+
+```bash
+docker run myimage
+```
+
+Check:
+
+* Publish output included?
+* Runtime image correct?
+* SDK image mistakenly used?
+
+
+### 11. Add Early Startup Logging in .NET
+
+```csharp
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger();
+
+try
+{
+    Log.Information("Starting app");
+    var builder = WebApplication.CreateBuilder(args);
+}
+catch(Exception ex)
+{
+    Log.Fatal(ex, "Startup failed");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+```
+
+### 12. Check External Dependencies
+
+App may hang before logs due to:
+
+* Database unavailable
+* Redis timeout
+* Service Bus issue
+* DNS resolution failure
+* SSL certificate issue
+
+Test from inside container:
+
+```bash
+ping host
+nslookup host
+curl url
+```
+
+### 13. Use Monitoring Tools
+
+If no app logs, use platform logs:
+
+* Docker daemon logs
+* Kubernetes events
+* Microsoft Azure Container Apps logs
+* Application Insights telemetry
+* Node/system logs
+
+### 14. Common Real-World Root Causes
+
+Most frequent causes:
+
+* Wrong environment variables
+* Missing secret / Key Vault access
+* Wrong port binding
+* Health probe killing pod
+* Out of memory
+* Wrong ENTRYPOINT
+* Missing DLL / publish issue
+* DB connection timeout on startup
+* File permission issue
+* Logging sink misconfigured
+
+### If .NET + Azure:
+
+If request never reaches the container, I check ingress, service mapping, DNS, TLS, and network policies. If container starts but app fails, I inspect startup exceptions and dependency connectivity.
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Check issue in Production in well structured flow ?
+
+When no logs are available in production, I troubleshoot layer by layer: external access, ingress/load balancer, Kubernetes pod state, pod events, probes, service routing, environment variables, secrets, dependency connectivity, and resource pressure. In .NET apps, I also verify startup configuration, port binding, and enable bootstrap console logging so failures before DI or middleware startup are captured.
+
+#### Troubleshoot from outside → inside.
+
+```flow
+
+User reports outage
+        |
+        v
+Is app reachable?
+ ├─ No --> Check DNS / Ingress / Gateway / LB
+ └─ Yes
+        |
+        v
+Is pod/container running?
+ ├─ No --> Check pod status / events / image / crash reason
+ └─ Yes
+        |
+        v
+Is traffic reaching pod?
+ ├─ No --> Check Service / Endpoints / NetworkPolicy
+ └─ Yes
+        |
+        v
+Is app healthy?
+ ├─ No --> Check probes / startup / config / secrets
+ └─ Yes
+        |
+        v
+Is dependency failing?
+ ├─ Yes --> DB / Redis / Queue / DNS / TLS
+ └─ No
+        |
+        v
+Check observability pipeline
+(Container stdout / Azure Monitor / App Insights)
+
+```
+
+### 1. Check External Reachability
+
+#### Questions
+
+* Is site/API down for everyone or only some users?
+* DNS resolving?
+* TLS certificate valid?
+* Gateway returning 502/503/504?
+* Checks
+* Browser / curl from outside
+* Load balancer health
+* Ingress controller status
+
+#### For Microsoft Azure:
+
+* Application Gateway
+* Front Door
+* Azure Load Balancer
+* Ingress Controller
+
+If Failing, Likely causes:
+
+* DNS issue
+* TLS cert expired
+* Ingress misroute
+* Backend unhealthy
+
+### Decision Tree by Symptom
+
+| Symptom                | Likely Cause                        |
+| ---------------------- | ----------------------------------- |
+| 502 from gateway       | Pod unhealthy / service route issue |
+| Pod Pending            | Scheduling / resources              |
+| CrashLoopBackOff       | Startup exception                   |
+| Running but no traffic | Service selector / ingress          |
+| Random restarts        | OOM / probe failure                 |
+| Slow then fail         | Dependency timeout                  |
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## How to securely transfer the Files ?
+
+ In interviews, answer with security layers, not just one protocol.
+
+ To securely transfer files, I use encrypted channels like HTTPS or SFTP, strong authentication, role-based authorization, integrity checks, malware scanning, and audit logs. In cloud systems, I prefer private storage with time-limited signed URLs such as Azure SAS tokens. For highly sensitive files, I also encrypt the file itself using AES or PGP.
+
+### To securely transfer files, the best approach depends on where the files move:
+
+* server-to-server 
+* user upload 
+* internal systems 
+* cloud 
+* microservices 
+* external partners
+
+### 1. Core Principles of Secure File Transfer
+
+Use these controls:
+
+* Encrypt in transit
+* Encrypt at rest
+* Authenticate sender/receiver
+* Authorize access
+* Integrity validation
+* Audit logging
+* Malware scanning
+* Expiry / retention controls
+
+### 2. Common Secure Transfer Methods
+
+#### A. SFTP (SSH File Transfer Protocol)
+
+Best for enterprise server-to-server transfers.
+
+* Uses SSH encryption
+* Supports key-based auth
+* Safer than FTP
+
+Use when:
+
+* Bank/vendor file exchange
+* Scheduled batch files
+
+#### B. HTTPS File Upload / Download
+
+Best for web apps, APIs, portals.
+
+* TLS encryption
+* Token-based auth
+* Easy browser support
+
+Use:
+
+* Customer uploads documents
+* Download reports securely
+
+#### C. Cloud Storage with Signed URLs
+
+Very common in modern apps.
+
+Examples:
+
+* Microsoft Azure Blob Storage SAS
+* Amazon Web Services S3 Pre-Signed URL
+* Google Cloud Signed URLs
+
+Benefits:
+
+* Temporary access
+* No need to expose credentials
+* Time-limited download/upload.
+
+#### 3. Secure Transfer in .NET Application
+
+Flow Example
+
+User uploads file:
+
+* Validate file type/size
+* Scan for malware
+* Encrypt transport via HTTPS
+* Store in Blob Storage
+* Generate temporary secure link
+* Log access
+
+#### 4. Authentication & Authorization
+
+Use:
+
+* OAuth 2.0
+* OpenID Connect
+* API Keys (internal systems)
+* SSH Keys (SFTP)
+* Managed Identity (Azure services)
+
+Example:
+* Only Finance users can download payroll files
+
+#### 5. Encrypt the File Itself (Extra Security)
+
+##### Even if transport is secure, encrypt sensitive files before sending.
+
+Options:
+
+* AES-256 encryption
+* PGP encryption
+* Password-protected archive (less ideal)
+
+Use for:
+
+* Financial statements
+* Customer data
+* Legal documents
+
+#### 7. Prevent Common Risks
+
+Avoid:
+
+* Plain FTP
+* Public open links
+* Permanent shared credentials
+* No expiry URLs
+* No virus scanning
+* Uploading executable files blindly
+* Storing secrets in code
+
+#### 8. .NET Example: Upload to Azure Blob Securely
+
+```csharp
+[Authorize]
+[HttpPost("upload")]
+public async Task<IActionResult> Upload(IFormFile file)
+{
+    if (file.Length == 0) return BadRequest();
+
+    var blobClient = _containerClient.GetBlobClient(file.FileName);
+
+    using var stream = file.OpenReadStream();
+    await blobClient.UploadAsync(stream, overwrite: true);
+
+    return Ok();
+}
+```
+
+Security additions:
+
+* HTTPS only
+* Validate MIME type
+* Virus scan
+* Private container
+* SAS link for download
+
+#### 9. Secure Internal Microservice File Transfer
+
+Use:
+
+* HTTPS / mTLS between services
+* Service identity
+* Message queue with file reference
+* Store file in shared secure storage
+
+Example:
+* Invoice service uploads PDF → sends blob URL through queue
+
+
+| Scenario                       | Best Option             |
+| ------------------------------ | ----------------------- |
+| Web app upload                 | HTTPS                   |
+| External vendor batch transfer | SFTP                    |
+| Cloud app download             | Signed URL              |
+| Highly sensitive documents     | HTTPS + File Encryption |
+| Service-to-service             | HTTPS + mTLS            |
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## My Postman API is returning proper response, but when we open the api in browser it doesn't work? What might be the reason ?
+
+If the API works in Postman but not in browser, I first compare the HTTP method, headers, authentication token, and request URL. Then I check browser DevTools for CORS, certificate, JavaScript, or network errors. Browsers enforce security rules like CORS and cookies, while Postman does not.
+
+### 1. HTTP Method Difference
+
+* Browsers usually open URLs with GET requests
+* Your API may only support POST / PUT / DELETE
+* 405 Method Not Allowed
+
+### 2. CORS Issue (Very Common)
+
+* Postman ignores browser same-origin restrictions. Browsers enforce CORS
+* Browser blocks request unless CORS is enabled
+* If frontend is on another domain/port:
+
+```sample 
+Frontend: http://localhost:3000
+API: https://localhost:5001
+```
+
+```csharp
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        p => p.WithOrigins("http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+app.UseCors("AllowFrontend");
+```
+
+### 3. Authentication Headers Missing
+
+Postman may send:
+
+* Bearer token
+* API key
+* Custom headers
+* Cookies
+
+Browser URL bar sends none of these automatically
+
+### 4. HTTPS / Certificate Problem
+
+Postman can be more forgiving with local/self-signed certificates. Browser may block or warn.
+
+Examples:
+
+* Invalid SSL certificate
+* Self-signed cert not trusted
+* Mixed content (HTTPS page calling HTTP API)
+
+### 5. Content Negotiation / Accept Header
+
+Postman sends different headers than browser.
+
+#### Example:
+
+* Postman: Accept: application/json
+* Browser may prefer HTML
+* If API or middleware behaves differently by headers, response may differ.
+
+### 6. Route / Query Parameter Difference
+
+### 7. CSRF / Anti-Forgery Validation
+
+* Some endpoints require anti-forgery token from browser forms
+* Postman bypasses app flow but browser request from UI may need token
+
+### 8. Proxy / Firewall / Ad Blocker / Extensions
+
+Browser extensions or corporate proxy may block requests.
+
+Try:
+
+* Incognito mode
+* Disable extensions
+* Another browser
+
+
+### How to Troubleshoot Properly
+
+```flow
+In Browser
+
+Press F12 → Developer Tools
+
+Check:
+Network Tab
+Request URL
+Method
+Status code
+Request headers
+Response body
+CORS errors
+Console Tab
+
+Look for:
+CORS blocked
+JS errors
+Certificate warnings
+```
+
+| Code               | Likely Reason      |
+| ------------------ | ------------------ |
+| 401                | Missing auth token |
+| 403                | Forbidden / CORS   |
+| 404                | Wrong route        |
+| 405                | Wrong HTTP method  |
+| 500                | Server exception   |
+| Blocked in Console | CORS / SSL / JS    |
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## I am getting 500 server during transaction, what might be the reason ?
+
+A 500 Internal Server Error during a transaction means the server hit an unhandled exception while processing the request. “During transaction” usually points to database save/commit logic, but it can also be caused by validation, concurrency, timeouts, or infrastructure issues. Common reasons are SQL constraint violations, deadlocks, timeouts, concurrency conflicts, null reference bugs, or connection issues. I would check logs, stack trace, database events, and reproduce the request with the same payload. Then I’d add retries for transient failures and proper exception handling.
+
+### Most Common Reasons
+
+#### 1. Exception During Database Commit
+
+The request reaches DB transaction code, then fails on commit. Typical causes:
+
+* Constraint violation
+* Null value in required column
+* Duplicate key
+* Foreign key failure
+* Data type mismatch
+
+Example:
+
+* Unique index on Email -> Trying to insert duplicate email can throw exception.
+
+#### 2. Deadlock or Blocking
+
+Two transactions lock resources and one gets chosen as victim. Symptoms:
+
+* Random failures under load
+* Retry sometimes works
+
+#### 3. Timeout
+
+Transaction takes too long. Causes:
+
+* Slow query
+* Missing indexes
+* Network latency
+* External API call inside transaction
+* Large batch update
+
+#### 4. Concurrency Conflict
+
+* Another user changed the same row before your commit.
+* Common in optimistic concurrency systems.
+
+Example in EF Core with RowVersion.
+
+#### 5. Null Reference / Application Bug
+
+The transaction itself may be fine, but your code throws before commit
+
+#### 6. Connection Problem
+
+Database connection dropped during transaction. Causes:
+
+* DB restart
+* Network issue
+* Pool exhaustion
+* Wrong credentials rotation
+
+#### 7. Nested Transactions / Incorrect Transaction Handling
+
+Examples:
+
+* Reusing disposed transaction
+* Multiple SaveChanges with wrong scope
+* Commit after rollback
+* Async transaction misuse
+
+#### 8. External Service Call Inside Transaction
+
+Bad practice:
+
+* Begin DB transaction
+* Call payment API
+* Wait / fail
+* DB transaction times out
+
+Use patterns like Saga / Outbox instead.
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## How to troubleshoot 500 Internal server error ?
+
+### 1. Check Server Logs / Exception Details
+
+Look for:
+
+* Stack trace
+* SQL exception number
+* Inner exception
+* Correlation ID
+* Most important step
+
+### 2. Reproduce with Same Payload
+
+Compare:
+
+* Input data
+* Duplicate values
+* Null fields
+* Data size
+
+### 3. Check Database Side
+
+Inspect:
+
+* Locks
+* Deadlocks
+* Slow queries
+* Failed constraints
+
+
+### 4. Enable Structured Logging
+
+Log around transaction boundaries:
+
+```csharp
+Log.Information("Starting transaction");
+Log.Information("Saving order {OrderId}", id);
+Log.Information("Committing transaction");
+```
+
+### 5. Inspect Response Body
+
+* Sometimes 500 contains hidden useful message in non-production.
+
+
+| Symptom                  | Likely Cause                    |
+| ------------------------ | ------------------------------- |
+| Works sometimes          | Deadlock / timeout              |
+| Fails for duplicate data | Unique constraint               |
+| Under heavy load         | Blocking / pool exhaustion      |
+| Same row edited by users | Concurrency                     |
+| Immediate failure        | Null reference / validation bug |
+
+
+--------------------------------------------------------------------------------------------------------------------------
