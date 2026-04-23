@@ -3658,3 +3658,165 @@ Too many indexes cause:
 * Longer maintenance
 
 --------------------------------------------------------------------------------------------------------------------------
+
+## How are unit and integration tests performed in ADO CI/CD?
+
+* In Azure DevOps pipeline, after restore and build, we run tests using dotnet test.
+* For unit testing we use frameworks like xUnit/NUnit with Moq.
+* For integration testing we use WebApplicationFactory, test APIs, database, DI, middleware, and external dependencies.
+* Results are published in pipeline, and deployment happens only if tests pass.
+* xUnit for testing
+* Moq for mocking
+* Coverlet for coverage
+* WebApplicationFactory for integration tests
+* Azure DevOps Pipelines for CI/CD automation
+
+--------------------------------------------------------------------------------------------------------------------------
+## Deployment Strategies:
+
+For Blue-Green, the most common Azure service is Azure App Service using deployment slots, or AKS using separate environments and traffic switching. For Canary, AKS with ingress/service mesh, Azure Front Door, API Management, or Application Gateway can be used for percentage-based traffic routing. Azure DevOps is commonly used to automate the pipeline.
+
+
+```
+Web/API on App Service → Deployment Slots
+Containers/Microservices → AKS + Canary routing
+Enterprise CI/CD → Azure DevOps + App Insights
+```
+
+### 1. Blue-Green Deployment
+
+Two identical production environments:
+
+* Blue = current live version
+* Green = new version
+
+Users initially use Blue. You deploy new code to Green, test it, then switch traffic.
+
+#### Benefits
+* Near zero downtime
+* Fast rollback
+* Safe release
+
+### 2. Canary Deployment
+
+Release new version to a small percentage of users first, then gradually increase.
+
+#### Current:
+
+v1 handles 100% traffic
+
+#### Deploy:
+
+v2 to 5% users first
+
+### Flow
+
+```flow
+95% Users → v1
+5% Users  → v2
+
+Monitor:
+- Errors
+- Response time
+- Payment success rate
+
+If healthy:
+25% → 50% → 100%
+
+If issue:
+Route all traffic back to v1
+```
+
+#### Best For:
+
+* High traffic systems
+* Microservices
+* Continuous delivery
+
+| Feature         | Blue-Green      | Canary  |
+| --------------- | --------------- | ------- |
+| Traffic Switch  | All at once     | Gradual |
+| Rollback        | Instant         | Easy    |
+| Infra Cost      | Higher (2 envs) | Lower   |
+| Risk            | Low             | Lowest  |
+| Monitoring Need | Medium          | High    |
+
+### 3. Full cutover
+--------------------------------------------------------------------------------------------------------------------------
+
+## Why merge conflicts occur ?
+
+* Git cannot automatically combine changes from different branches because the same part of the code (or related history) was changed in incompatible ways.
+* In simple words: two versions disagree, and Git needs a human decision.
+* PRs detect conflicts before merge
+* Require branch up-to-date with main
+
+### Best Practices
+* Merge/rebase frequently
+* Keep feature branches short-lived
+* Small pull requests
+* Better modular design
+* Communicate ownership
+* Use trunk-based development
+* Avoid giant refactors mixed with feature work
+
+### A merge conflict is often not just a Git problem—it can indicate:
+
+* Too much coupling in code
+* Slow integration process
+* Large batch changes
+* Weak team coordination
+
+--------------------------------------------------------------------------------------------------------------------------
+
+## Best branching strategies ?
+
+It depends on the team. For fast CI/CD teams, Trunk-Based Development is best because changes merge frequently and reduce conflicts. For enterprise projects with planned releases, Git Flow or a simplified release branching model works well. In practice, I prefer short-lived feature branches, protected main branch, PR reviews, and automated pipelines.
+In enterprise .NET projects, I prefer short-lived feature branches with a protected main branch, PR validation, and release branches when needed. It balances speed, control, and deployment readiness.
+
+* Trunk-Based Development (modern DevOps favorite)
+* Git Flow (structured release model)
+* GitHub Flow (simple web/SaaS model)
+* Release Branching (enterprise support model)
+
+### 1. Trunk-Based Development (Recommended for Modern CI/CD)
+
+Single main branch:
+
+* main or master
+
+Developers create short-lived feature branches (or commit directly), merge quickly after PR.
+
+```
+main
+ ├─ feature/login (1 day)
+ ├─ feature/cart (few hours)
+ └─ merge back quickly
+```
+
+### Best For
+* Fast delivery
+* Microservices
+* Mature CI/CD
+* Small to medium teams
+
+### Benefits
+* Fewer merge conflicts
+* Frequent integration
+* Faster releases
+
+### 2. Release Branching
+
+```
+main
+release/1.0
+release/2.0
+hotfix/1.0.1
+```
+
+### Best For
+* Products with multiple live versions
+* On-prem software
+* Enterprise customers
+
+--------------------------------------------------------------------------------------------------------------------------
