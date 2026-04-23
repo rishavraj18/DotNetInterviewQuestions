@@ -3622,3 +3622,39 @@ Log.Information("Committing transaction");
 
 
 --------------------------------------------------------------------------------------------------------------------------
+
+## How do you optimize indexing?
+
+* Analyze slow queries 
+
+```
+SQL Server → Execution Plan, Query Store, DMVs
+PostgreSQL → EXPLAIN ANALYZE
+MySQL → EXPLAIN
+```
+
+* Add indexes on more filter column i.e. WHERE/JOIN/ORDER BY/GROUP BY columns
+* Use Clustered Index Wisely. Usually Primary Key, Sequential column. Bad: Random GUID as clustered key
+* Use composite indexes with proper order
+
+```
+SELECT * FROM Orders
+WHERE CustomerId = 101 AND Status = 'Paid';
+
+CREATE INDEX IX_Orders_CustomerId_Status
+ON Orders(CustomerId, Status);
+```
+
+* Use INCLUDE columns
+* Remove unused indexes
+* Balance read vs write performance
+* Remove Unused Indexes
+
+Too many indexes cause:
+
+* Slow inserts
+* Slow updates
+* More storage
+* Longer maintenance
+
+--------------------------------------------------------------------------------------------------------------------------
